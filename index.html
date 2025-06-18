@@ -135,13 +135,12 @@ class MainScene extends Phaser.Scene {
     this.add.rectangle(0, gameHeight / 2, gameWidth * 0.1, gameHeight, 0x8B4513);
     this.add.rectangle(gameWidth, gameHeight / 2, gameWidth * 0.1, gameHeight, 0x8B4513);
     
-    // Разметка дороги
     const laneWidth = gameWidth / this.laneCount;
-    for (let i = 1; i < this.laneCount; i++) {
-      const x = i * laneWidth;
-      this.add.rectangle(x, 0, 4, gameHeight, 0xFFFFFF);
-    }
-    
+    // Удаляем сплошные линии, оставляем только пунктир
+    // for (let i = 1; i < this.laneCount; i++) {
+    //   const x = i * laneWidth;
+    //   this.add.rectangle(x, 0, 4, gameHeight, 0xFFFFFF);
+    // }
     // Пунктирная разметка по центру полос
     for (let i = 0; i < this.laneCount; i++) {
       const x = i * laneWidth + laneWidth / 2;
@@ -154,25 +153,22 @@ class MainScene extends Phaser.Scene {
   createBackgroundElements() {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
-    
-    // Облака
-    for (let i = 0; i < 5; i++) {
-      const cloud = this.add.ellipse(
-        Phaser.Math.Between(0, gameWidth),
-        Phaser.Math.Between(50, gameHeight * 0.3),
-        Phaser.Math.Between(60, 120),
-        Phaser.Math.Between(30, 60),
-        0xFFFFFF,
-        0.8
-      );
-      cloud.setScrollFactor(0.1);
-    }
-    
+    // Удаляем облака
+    // for (let i = 0; i < 5; i++) {
+    //   const cloud = this.add.ellipse(
+    //     Phaser.Math.Between(0, gameWidth),
+    //     Phaser.Math.Between(50, gameHeight * 0.3),
+    //     Phaser.Math.Between(60, 120),
+    //     Phaser.Math.Between(30, 60),
+    //     0xFFFFFF,
+    //     0.8
+    //   );
+    //   cloud.setScrollFactor(0.1);
+    // }
     // Деревья на обочинах
     for (let i = 0; i < 8; i++) {
       const x = i % 2 === 0 ? -20 : gameWidth + 20;
       const y = (i * gameHeight / 8) + 50;
-      
       // Ствол
       this.add.rectangle(x, y, 20, 60, 0x8B4513);
       // Крона
