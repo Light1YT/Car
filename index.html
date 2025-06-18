@@ -2,39 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Yellow Car Game</title>
   <style>
-    body { 
-      margin: 0; 
-      overflow: hidden; 
-      touch-action: none;
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      -khtml-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
-      background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
-    }
-    canvas { 
-      display: block; 
-      background: transparent;
-      box-shadow: 0 0 20px rgba(0,0,0,0.3);
-    }
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; background: #222; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
 </head>
 <body>
-
 <script>
+
 class MainScene extends Phaser.Scene {
   constructor() {
     super('MainScene');
     this.gameOverFlag = false;
-    this.touchStartX = 0;
-    this.touchStartY = 0;
-    this.isTouching = false;
   }
 
   preload() {
@@ -52,167 +33,26 @@ class MainScene extends Phaser.Scene {
     this.gameOverFlag = false;
 
     const gameWidth = this.sys.game.config.width;
-    const gameHeight = this.sys.game.config.height;
     this.laneWidth = gameWidth / this.laneCount;
 
-    // Создаем дорогу
-    this.createRoad();
-    
-    // Создаем фоновые элементы
-    this.createBackgroundElements();
-
-    this.player = this.physics.add.sprite(gameWidth / 2, gameHeight * 0.8, 'car');
-    this.player.setDisplaySize(gameWidth * 0.2, gameHeight * 0.09);
+    this.player = this.physics.add.sprite(this.laneWidth * 1.5, 500, 'car');
+    this.player.setDisplaySize(100, 57);
     this.player.setCollideWorldBounds(true);
     this.player.lane = 1;
-    
-    // Добавляем тень для машины
-    this.playerShadow = this.add.ellipse(this.player.x, this.player.y + 40, gameWidth * 0.15, gameHeight * 0.02, 0x000000, 0.3);
 
     this.obstacles = this.physics.add.group();
     this.bonuses = this.physics.add.group();
 
-    this.physics.add.collider(this.player, this.obstacles, () => this.handleGameOver(), null, this);
+    this.physics.add.overlap(this.player, this.obstacles, () => this.handleGameOver(), null, this);
     this.physics.add.overlap(this.player, this.bonuses, (player, bonus) => {
       bonus.destroy();
       this.score += 50;
-      this.createBonusEffect(bonus.x, bonus.y);
     }, null, this);
 
-    // Улучшенный счет
-    this.scoreText = this.add.text(20, 20, 'СЧЕТ: 0', { 
-      font: 'bold 24px Arial', 
-      fill: '#fff',
-      stroke: '#000',
-      strokeThickness: 3,
-      shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 4, fill: true }
-    });
+    this.scoreText = this.add.text(10, 10, 'Score: 0', { font: '20px Arial', fill: '#fff' });
 
-    // Клавиатурное управление
     this.input.keyboard.on('keydown-LEFT', () => this.changeLane(-1));
     this.input.keyboard.on('keydown-RIGHT', () => this.changeLane(1));
-    
-    // Сенсорное управление
-    this.input.on('pointerdown', (pointer) => {
-      this.touchStartX = pointer.x;
-      this.touchStartY = pointer.y;
-      this.isTouching = true;
-    });
-    
-    this.input.on('pointerup', (pointer) => {
-      if (this.isTouching) {
-        this.handleTouch(pointer.x, pointer.y);
-        this.isTouching = false;
-      }
-    });
-    
-    this.input.on('pointermove', (pointer) => {
-      if (this.isTouching) {
-        const deltaX = pointer.x - this.touchStartX;
-        const deltaY = pointer.y - this.touchStartY;
-        
-        // Если свайп достаточно длинный по горизонтали
-        if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
-          if (deltaX > 0) {
-            this.changeLane(1);
-          } else {
-            this.changeLane(-1);
-          }
-          this.isTouching = false;
-        }
-      }
-    });
-  }
-
-  createRoad() {
-    const gameWidth = this.sys.game.config.width;
-    const gameHeight = this.sys.game.config.height;
-    
-    // Основная дорога
-    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x333333);
-    
-    // Боковые обочины
-    this.add.rectangle(0, gameHeight / 2, gameWidth * 0.1, gameHeight, 0x8B4513);
-    this.add.rectangle(gameWidth, gameHeight / 2, gameWidth * 0.1, gameHeight, 0x8B4513);
-    
-    const laneWidth = gameWidth / this.laneCount;
-    // Удаляем сплошные линии, оставляем только пунктир
-    // for (let i = 1; i < this.laneCount; i++) {
-    //   const x = i * laneWidth;
-    //   this.add.rectangle(x, 0, 4, gameHeight, 0xFFFFFF);
-    // }
-    // Пунктирная разметка по центру полос
-    for (let i = 0; i < this.laneCount; i++) {
-      const x = i * laneWidth + laneWidth / 2;
-      for (let y = 0; y < gameHeight; y += 40) {
-        this.add.rectangle(x, y, 2, 20, 0xFFFFFF);
-      }
-    }
-  }
-
-  createBackgroundElements() {
-    const gameWidth = this.sys.game.config.width;
-    const gameHeight = this.sys.game.config.height;
-    // Удаляем облака
-    // for (let i = 0; i < 5; i++) {
-    //   const cloud = this.add.ellipse(
-    //     Phaser.Math.Between(0, gameWidth),
-    //     Phaser.Math.Between(50, gameHeight * 0.3),
-    //     Phaser.Math.Between(60, 120),
-    //     Phaser.Math.Between(30, 60),
-    //     0xFFFFFF,
-    //     0.8
-    //   );
-    //   cloud.setScrollFactor(0.1);
-    // }
-    // Деревья на обочинах
-    for (let i = 0; i < 8; i++) {
-      const x = i % 2 === 0 ? -20 : gameWidth + 20;
-      const y = (i * gameHeight / 8) + 50;
-      // Ствол
-      this.add.rectangle(x, y, 20, 60, 0x8B4513);
-      // Крона
-      this.add.circle(x, y - 30, 40, 0x228B22);
-    }
-  }
-
-  createBonusEffect(x, y) {
-    // Создаем эффект частиц при сборе бонуса
-    const particles = this.add.particles('bonus');
-    const emitter = particles.createEmitter({
-      x: x,
-      y: y,
-      speed: { min: 100, max: 200 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 1, end: 0 },
-      lifespan: 1000,
-      quantity: 10
-    });
-    
-    // Удаляем эффект через секунду
-    this.time.delayedCall(1000, () => {
-      particles.destroy();
-    });
-  }
-
-  handleTouch(endX, endY) {
-    const deltaX = endX - this.touchStartX;
-    const deltaY = endY - this.touchStartY;
-    
-    // Минимальное расстояние для свайпа
-    const minSwipeDistance = 30;
-    
-    if (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance) {
-      // Определяем направление свайпа
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        // Горизонтальный свайп
-        if (deltaX > 0) {
-          this.changeLane(1); // Вправо
-        } else {
-          this.changeLane(-1); // Влево
-        }
-      }
-    }
   }
 
   update(time, delta) {
@@ -224,7 +64,7 @@ class MainScene extends Phaser.Scene {
     }
 
     this.score += delta * 0.01;
-    this.scoreText.setText('СЧЕТ: ' + Math.floor(this.score));
+    this.scoreText.setText('Score: ' + Math.floor(this.score));
 
     if (time - this.lastObstacleSpawnTime > 800) {
       const lanes = Phaser.Utils.Array.Shuffle([0, 1, 2]);
@@ -244,10 +84,6 @@ class MainScene extends Phaser.Scene {
 
     this.obstacles.children.iterate(child => child.y += this.speed * delta / 1000);
     this.bonuses.children.iterate(child => child.y += this.speed * delta / 1000);
-    
-    // Обновляем позицию тени
-    this.playerShadow.x = this.player.x;
-    this.playerShadow.y = this.player.y + 40;
   }
 
   spawnObject(type, lane) {
@@ -255,16 +91,7 @@ class MainScene extends Phaser.Scene {
     const y = -60;
     const group = (type === 'bonus') ? this.bonuses : this.obstacles;
     const sprite = group.create(x, y, type);
-    sprite.setDisplaySize(this.sys.game.config.width * 0.14, this.sys.game.config.height * 0.07);
-    
-    if (type === 'obstacle') {
-      sprite.setImmovable(true);
-    }
-    // Для бонусов не устанавливаем никаких специальных настроек физики
-    
-    // Добавляем тень для объектов
-    const shadow = this.add.ellipse(x, y + 30, this.sys.game.config.width * 0.1, this.sys.game.config.height * 0.015, 0x000000, 0.3);
-    sprite.shadow = shadow;
+    sprite.setImmovable(true);
   }
 
   changeLane(dir) {
@@ -280,59 +107,26 @@ class MainScene extends Phaser.Scene {
     this.physics.pause();
     this.player.setTint(0xff0000);
 
-    // Улучшенный экран окончания игры
-    const overlay = this.add.rectangle(this.sys.game.config.width / 2, this.sys.game.config.height / 2, 300, 200, 0x000000, 0.9);
-    overlay.setStrokeStyle(2, 0xFFFFFF);
-    
-    this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 - 40, 'ИГРА ОКОНЧЕНА', { 
-      font: 'bold 24px Arial', 
-      fill: '#ff0000',
-      stroke: '#000',
-      strokeThickness: 2
-    }).setOrigin(0.5);
-    
-    this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2, 'Ты набрал: ' + Math.floor(this.score) + ' очков', { 
-      font: '18px Arial', 
-      fill: '#fff',
-      stroke: '#000',
-      strokeThickness: 1
-    }).setOrigin(0.5);
-    
-    const restartButton = this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 + 40, 'ИГРАТЬ СНОВА', { 
-      font: 'bold 20px Arial', 
-      fill: '#00ff00', 
-      backgroundColor: '#000',
-      stroke: '#fff',
-      strokeThickness: 1
-    })
-      .setOrigin(0.5)
-      .setPadding(15, 10)
+    this.add.rectangle(180, 320, 240, 120, 0x000000, 0.85);
+    this.add.text(100, 280, 'Ты набрал: ' + Math.floor(this.score) + ' очков', { font: '18px Arial', fill: '#fff' });
+    const okButton = this.add.text(140, 320, 'OK', { font: '22px Arial', fill: '#00ff00', backgroundColor: '#000' })
+      .setPadding(10)
       .setInteractive()
       .on('pointerdown', () => {
         this.scene.restart();
-      })
-      .on('pointerover', () => {
-        restartButton.setScale(1.1);
-      })
-      .on('pointerout', () => {
-        restartButton.setScale(1);
       });
   }
 }
 
 const config = {
   type: Phaser.AUTO,
-  width: window.innerWidth,
-  height: window.innerHeight,
+  width: 360,
+  height: 640,
   physics: { default: 'arcade' },
   scene: MainScene
 };
 
-const game = new Phaser.Game(config);
-
-window.addEventListener('resize', () => {
-  game.scale.resize(window.innerWidth, window.innerHeight);
-});
+new Phaser.Game(config);
 </script>
 </body>
 </html>
