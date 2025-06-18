@@ -2,14 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Yellow Car Game</title>
   <style>
-    body { margin: 0; overflow: hidden; }
-    canvas { display: block; background: #222; }
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+      background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+    }
+    canvas { 
+      display: block; 
+      background: transparent;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
 </head>
 <body>
+
 <script>
 class MainScene extends Phaser.Scene {
   constructor() {
@@ -35,10 +45,17 @@ class MainScene extends Phaser.Scene {
     const gameHeight = this.sys.game.config.height;
     this.laneWidth = gameWidth / this.laneCount;
 
+    // Создаем дорогу и фоновые элементы
+    this.createRoad();
+    this.createBackgroundElements();
+
     this.player = this.physics.add.sprite(gameWidth / 2, gameHeight * 0.8, 'car');
     this.player.setDisplaySize(gameWidth * 0.2, gameHeight * 0.09);
     this.player.setCollideWorldBounds(true);
     this.player.lane = 1;
+
+    // Добавляем тень для машинки
+    this.playerShadow = this.add.ellipse(this.player.x, this.player.y + 30, gameWidth * 0.18, gameHeight * 0.03, 0x000000, 0.4);
 
     this.obstacles = this.physics.add.group();
     this.bonuses = this.physics.add.group();
@@ -47,12 +64,120 @@ class MainScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.bonuses, (player, bonus) => {
       bonus.destroy();
       this.score += 50;
+      // Эффект сбора бонуса
+      this.createScoreEffect(bonus.x, bonus.y, '+50');
     }, null, this);
 
-    this.scoreText = this.add.text(10, 10, 'Score: 0', { font: '20px Arial', fill: '#fff' });
+    // Улучшенный счет
+    this.scoreText = this.add.text(20, 20, 'СЧЕТ: 0', { 
+      font: 'bold 28px Arial', 
+      fill: '#fff',
+      stroke: '#000',
+      strokeThickness: 4,
+      shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 5, fill: true }
+    });
 
     this.input.keyboard.on('keydown-LEFT', () => this.changeLane(-1));
     this.input.keyboard.on('keydown-RIGHT', () => this.changeLane(1));
+  }
+
+  createRoad() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+    
+    // Основная дорога (асфальт)
+    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x2c2c2c);
+    
+    // Обочины с травой
+    const shoulderWidth = gameWidth * 0.15;
+    this.add.rectangle(shoulderWidth / 2, gameHeight / 2, shoulderWidth, gameHeight, 0x228B22);
+    this.add.rectangle(gameWidth - shoulderWidth / 2, gameHeight / 2, shoulderWidth, gameHeight, 0x228B22);
+    
+    // Боковые ограждения
+    this.add.rectangle(shoulderWidth, gameHeight / 2, 8, gameHeight, 0xFFFFFF);
+    this.add.rectangle(gameWidth - shoulderWidth, gameHeight / 2, 8, gameHeight, 0xFFFFFF);
+    
+    // Разметка полос движения
+    const roadWidth = gameWidth - (shoulderWidth * 2);
+    const roadStart = shoulderWidth;
+    const laneWidth = roadWidth / this.laneCount;
+    
+    // Центральные линии между полосами
+    for (let i = 1; i < this.laneCount; i++) {
+      const x = roadStart + i * laneWidth;
+      for (let y = 0; y < gameHeight; y += 60) {
+        this.add.rectangle(x, y, 4, 30, 0xFFFF00);
+      }
+    }
+    
+    // Боковые пунктирные линии
+    for (let y = 0; y < gameHeight; y += 40) {
+      this.add.rectangle(roadStart + 20, y, 2, 20, 0xFFFFFF);
+      this.add.rectangle(gameWidth - shoulderWidth - 20, y, 2, 20, 0xFFFFFF);
+    }
+    
+    // Обновляем ширину полос для игровой логики
+    this.laneWidth = laneWidth;
+    this.roadStart = roadStart;
+  }
+
+  createBackgroundElements() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+    const shoulderWidth = gameWidth * 0.15;
+    
+    // Деревья на обочинах
+    for (let i = 0; i < 12; i++) {
+      const side = i % 2;
+      const x = side === 0 ? shoulderWidth / 2 : gameWidth - shoulderWidth / 2;
+      const y = (i / 2) * (gameHeight / 6) + 50;
+      
+      // Ствол дерева
+      this.add.rectangle(x, y, 15, 50, 0x8B4513);
+      // Крона дерева
+      this.add.circle(x, y - 25, 30, 0x006400);
+      // Тень дерева
+      this.add.ellipse(x + 10, y + 25, 40, 15, 0x000000, 0.3);
+    }
+    
+    // Здания на заднем плане
+    for (let i = 0; i < 8; i++) {
+      const side = i % 2;
+      const x = side === 0 ? -30 : gameWidth + 30;
+      const y = (i / 2) * (gameHeight / 4) + 100;
+      const height = Phaser.Math.Between(80, 150);
+      const width = Phaser.Math.Between(40, 80);
+      
+      // Здание
+      this.add.rectangle(x, y - height/2, width, height, 0x696969);
+      // Окна
+      for (let j = 0; j < 3; j++) {
+        for (let k = 0; k < Math.floor(height/30); k++) {
+          if (Phaser.Math.Between(0, 100) < 60) {
+            this.add.rectangle(x - width/3 + j * width/3, y - height/2 + k * 25, 8, 8, 0xFFFF00, 0.8);
+          }
+        }
+      }
+    }
+  }
+
+  createScoreEffect(x, y, text) {
+    const scoreText = this.add.text(x, y, text, {
+      font: 'bold 20px Arial',
+      fill: '#00ff00',
+      stroke: '#000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // Анимация текста
+    this.tweens.add({
+      targets: scoreText,
+      y: y - 50,
+      alpha: 0,
+      duration: 1000,
+      ease: 'Power2',
+      onComplete: () => scoreText.destroy()
+    });
   }
 
   update(time, delta) {
@@ -64,7 +189,7 @@ class MainScene extends Phaser.Scene {
     }
 
     this.score += delta * 0.01;
-    this.scoreText.setText('Score: ' + Math.floor(this.score));
+    this.scoreText.setText('СЧЕТ: ' + Math.floor(this.score));
 
     if (time - this.lastObstacleSpawnTime > 800) {
       const lanes = Phaser.Utils.Array.Shuffle([0, 1, 2]);
@@ -75,7 +200,7 @@ class MainScene extends Phaser.Scene {
         if (placedObstacles < 2 && Phaser.Math.Between(0, 1000) < 300) {
           this.spawnObject('obstacle', lane);
           placedObstacles++;
-        } else if (Phaser.Math.Between(0, 1000) < 100) {
+        } else if (Phaser.Math.Between(0, 1000) < 120) {
           this.spawnObject('bonus', lane);
         }
       }
@@ -84,21 +209,29 @@ class MainScene extends Phaser.Scene {
 
     this.obstacles.children.iterate(child => child.y += this.speed * delta / 1000);
     this.bonuses.children.iterate(child => child.y += this.speed * delta / 1000);
+    
+    // Обновляем тень машинки
+    this.playerShadow.x = this.player.x;
+    this.playerShadow.y = this.player.y + 30;
   }
 
   spawnObject(type, lane) {
-    const x = lane * this.laneWidth + this.laneWidth / 2;
+    const x = this.roadStart + lane * this.laneWidth + this.laneWidth / 2;
     const y = -60;
     const group = (type === 'bonus') ? this.bonuses : this.obstacles;
     const sprite = group.create(x, y, type);
     sprite.setDisplaySize(this.sys.game.config.width * 0.14, this.sys.game.config.height * 0.07);
     sprite.setImmovable(true);
+    
+    // Добавляем тень для объектов
+    const shadow = this.add.ellipse(x, y + 25, this.sys.game.config.width * 0.12, this.sys.game.config.height * 0.02, 0x000000, 0.4);
+    sprite.shadow = shadow;
   }
 
   changeLane(dir) {
     if (this.gameOverFlag) return;
     this.player.lane = Phaser.Math.Clamp(this.player.lane + dir, 0, this.laneCount - 1);
-    this.player.x = this.player.lane * this.laneWidth + this.laneWidth / 2;
+    this.player.x = this.roadStart + this.player.lane * this.laneWidth + this.laneWidth / 2;
   }
 
   handleGameOver() {
@@ -108,13 +241,44 @@ class MainScene extends Phaser.Scene {
     this.physics.pause();
     this.player.setTint(0xff0000);
 
-    this.add.rectangle(this.sys.game.config.width / 2, this.sys.game.config.height / 2, 240, 120, 0x000000, 0.85);
-    this.add.text(this.sys.game.config.width / 2 - 80, this.sys.game.config.height / 2 - 20, 'Ты набрал: ' + Math.floor(this.score) + ' очков', { font: '18px Arial', fill: '#fff' });
-    const okButton = this.add.text(this.sys.game.config.width / 2 - 20, this.sys.game.config.height / 2 + 10, 'OK', { font: '22px Arial', fill: '#00ff00', backgroundColor: '#000' })
-      .setPadding(10)
+    // Экран окончания игры
+    const overlay = this.add.rectangle(this.sys.game.config.width / 2, this.sys.game.config.height / 2, 350, 200, 0x000000, 0.9);
+    overlay.setStrokeStyle(3, 0xFFFFFF);
+    
+    this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 - 50, 'ИГРА ОКОНЧЕНА', { 
+      font: 'bold 28px Arial', 
+      fill: '#ff4444',
+      stroke: '#000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 - 10, 'Итоговый счет: ' + Math.floor(this.score), { 
+      font: 'bold 20px Arial', 
+      fill: '#fff',
+      stroke: '#000',
+      strokeThickness: 1
+    }).setOrigin(0.5);
+    
+    const restartButton = this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 + 40, 'НАЧАТЬ ЗАНОВО', { 
+      font: 'bold 22px Arial', 
+      fill: '#00ff00', 
+      backgroundColor: '#000',
+      stroke: '#fff',
+      strokeThickness: 1
+    })
+      .setOrigin(0.5)
+      .setPadding(15, 10)
       .setInteractive()
       .on('pointerdown', () => {
         this.scene.restart();
+      })
+      .on('pointerover', () => {
+        restartButton.setScale(1.1);
+        restartButton.setFill('#44ff44');
+      })
+      .on('pointerout', () => {
+        restartButton.setScale(1);
+        restartButton.setFill('#00ff00');
       });
   }
 }
