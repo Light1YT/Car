@@ -11,7 +11,6 @@
 </head>
 <body>
 <script>
-
 class MainScene extends Phaser.Scene {
   constructor() {
     super('MainScene');
@@ -33,10 +32,11 @@ class MainScene extends Phaser.Scene {
     this.gameOverFlag = false;
 
     const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
     this.laneWidth = gameWidth / this.laneCount;
 
-    this.player = this.physics.add.sprite(this.laneWidth * 1.5, 500, 'car');
-    this.player.setDisplaySize(100, 57);
+    this.player = this.physics.add.sprite(gameWidth / 2, gameHeight * 0.8, 'car');
+    this.player.setDisplaySize(gameWidth * 0.2, gameHeight * 0.09);
     this.player.setCollideWorldBounds(true);
     this.player.lane = 1;
 
@@ -91,6 +91,7 @@ class MainScene extends Phaser.Scene {
     const y = -60;
     const group = (type === 'bonus') ? this.bonuses : this.obstacles;
     const sprite = group.create(x, y, type);
+    sprite.setDisplaySize(this.sys.game.config.width * 0.14, this.sys.game.config.height * 0.07);
     sprite.setImmovable(true);
   }
 
@@ -107,9 +108,9 @@ class MainScene extends Phaser.Scene {
     this.physics.pause();
     this.player.setTint(0xff0000);
 
-    this.add.rectangle(180, 320, 240, 120, 0x000000, 0.85);
-    this.add.text(100, 280, 'Ты набрал: ' + Math.floor(this.score) + ' очков', { font: '18px Arial', fill: '#fff' });
-    const okButton = this.add.text(140, 320, 'OK', { font: '22px Arial', fill: '#00ff00', backgroundColor: '#000' })
+    this.add.rectangle(this.sys.game.config.width / 2, this.sys.game.config.height / 2, 240, 120, 0x000000, 0.85);
+    this.add.text(this.sys.game.config.width / 2 - 80, this.sys.game.config.height / 2 - 20, 'Ты набрал: ' + Math.floor(this.score) + ' очков', { font: '18px Arial', fill: '#fff' });
+    const okButton = this.add.text(this.sys.game.config.width / 2 - 20, this.sys.game.config.height / 2 + 10, 'OK', { font: '22px Arial', fill: '#00ff00', backgroundColor: '#000' })
       .setPadding(10)
       .setInteractive()
       .on('pointerdown', () => {
@@ -120,13 +121,17 @@ class MainScene extends Phaser.Scene {
 
 const config = {
   type: Phaser.AUTO,
-  width: 360,
-  height: 640,
+  width: window.innerWidth,
+  height: window.innerHeight,
   physics: { default: 'arcade' },
   scene: MainScene
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+window.addEventListener('resize', () => {
+  game.scale.resize(window.innerWidth, window.innerHeight);
+});
 </script>
 </body>
 </html>
