@@ -25,6 +25,9 @@ class MainScene extends Phaser.Scene {
   constructor() {
     super('MainScene');
     this.gameOverFlag = false;
+    this.touchStartX = 0;
+    this.touchStartY = 0;
+    this.isTouching = false;
   }
 
   preload() {
@@ -79,6 +82,37 @@ class MainScene extends Phaser.Scene {
 
     this.input.keyboard.on('keydown-LEFT', () => this.changeLane(-1));
     this.input.keyboard.on('keydown-RIGHT', () => this.changeLane(1));
+    
+    // Управление свайпами
+    this.input.on('pointerdown', (pointer) => {
+      this.touchStartX = pointer.x;
+      this.touchStartY = pointer.y;
+      this.isTouching = true;
+    });
+    
+    this.input.on('pointerup', (pointer) => {
+      if (this.isTouching) {
+        this.handleSwipe(pointer.x, pointer.y);
+        this.isTouching = false;
+      }
+    });
+    
+    this.input.on('pointermove', (pointer) => {
+      if (this.isTouching) {
+        const deltaX = pointer.x - this.touchStartX;
+        const deltaY = pointer.y - this.touchStartY;
+        
+        // Если свайп достаточно длинный по горизонтали
+        if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+          if (deltaX > 0) {
+            this.changeLane(1); // Вправо
+          } else {
+            this.changeLane(-1); // Влево
+          }
+          this.isTouching = false;
+        }
+      }
+    });
   }
 
   createRoad() {
@@ -280,6 +314,26 @@ class MainScene extends Phaser.Scene {
         restartButton.setScale(1);
         restartButton.setFill('#00ff00');
       });
+  }
+
+  handleSwipe(endX, endY) {
+    const deltaX = endX - this.touchStartX;
+    const deltaY = endY - this.touchStartY;
+    
+    // Минимальное расстояние для свайпа
+    const minSwipeDistance = 30;
+    
+    if (Math.abs(deltaX) > minSwipeDistance) {
+      // Определяем направление свайпа
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // Горизонтальный свайп
+        if (deltaX > 0) {
+          this.changeLane(1); // Вправо
+        } else {
+          this.changeLane(-1); // Влево
+        }
+      }
+    }
   }
 }
 
