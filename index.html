@@ -333,6 +333,14 @@ class MainScene extends Phaser.Scene {
           this.changeLane(-1); // Влево
         }
       }
+    } else {
+      // Если это был тап (а не свайп), определяем по половине экрана
+      const screenWidth = this.sys.game.config.width;
+      if (endX < screenWidth / 2) {
+        this.changeLane(-1); // Тап по левой половине - влево
+      } else {
+        this.changeLane(1); // Тап по правой половине - вправо
+      }
     }
   }
 }
