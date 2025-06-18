@@ -72,7 +72,7 @@ class MainScene extends Phaser.Scene {
     this.obstacles = this.physics.add.group();
     this.bonuses = this.physics.add.group();
 
-    this.physics.add.overlap(this.player, this.obstacles, () => this.handleGameOver(), null, this);
+    this.physics.add.collider(this.player, this.obstacles, () => this.handleGameOver(), null, this);
     this.physics.add.overlap(this.player, this.bonuses, (player, bonus) => {
       bonus.destroy();
       this.score += 50;
@@ -259,11 +259,8 @@ class MainScene extends Phaser.Scene {
     
     if (type === 'obstacle') {
       sprite.setImmovable(true);
-    } else if (type === 'bonus') {
-      // Бонус не должен останавливать машину - отключаем коллизии
-      sprite.body.setImmovable(false);
-      sprite.body.checkCollision.none = true;
     }
+    // Для бонусов не устанавливаем никаких специальных настроек физики
     
     // Добавляем тень для объектов
     const shadow = this.add.ellipse(x, y + 30, this.sys.game.config.width * 0.1, this.sys.game.config.height * 0.015, 0x000000, 0.3);
