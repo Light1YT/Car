@@ -256,8 +256,12 @@ class MainScene extends Phaser.Scene {
     const group = (type === 'bonus') ? this.bonuses : this.obstacles;
     const sprite = group.create(x, y, type);
     sprite.setDisplaySize(this.sys.game.config.width * 0.14, this.sys.game.config.height * 0.07);
-    sprite.setImmovable(true);
-    
+    if (type === 'obstacle') {
+      sprite.setImmovable(true);
+    } else if (type === 'bonus') {
+      // Бонус не должен быть препятствием: отключаем физическое тело
+      sprite.body.setEnable(false);
+    }
     // Добавляем тень для объектов
     const shadow = this.add.ellipse(x, y + 30, this.sys.game.config.width * 0.1, this.sys.game.config.height * 0.015, 0x000000, 0.3);
     sprite.shadow = shadow;
