@@ -394,15 +394,15 @@ class ShopScene extends Phaser.Scene {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
     
-    // Фон товара
+    // Фон товара (уменьшена ширина для предотвращения обрезания)
     const itemBg = this.add.graphics();
     itemBg.fillStyle(0xC8C8C8, 0.2);
-    itemBg.fillRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 12);
+    itemBg.fillRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
     itemBg.lineStyle(2, 0xC8C8C8);
-    itemBg.strokeRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 12);
+    itemBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
 
     // Название товара
-    this.add.text(x - gameWidth * 0.35, y - gameHeight * 0.012, item.name, {
+    this.add.text(x - gameWidth * 0.32, y - gameHeight * 0.012, item.name, {
       font: 'bold 16px Commissioner',
       fill: '#FFEE00',
       stroke: '#222222',
@@ -410,7 +410,7 @@ class ShopScene extends Phaser.Scene {
     }).setOrigin(0, 0.5);
 
     // Описание
-    this.add.text(x - gameWidth * 0.35, y + gameHeight * 0.012, item.description, {
+    this.add.text(x - gameWidth * 0.32, y + gameHeight * 0.012, item.description, {
       font: '12px Commissioner',
       fill: '#FFFFFF'
     }).setOrigin(0, 0.5);
@@ -424,7 +424,7 @@ class ShopScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5);
 
     // Кнопка купить (поднята на уровень центра элемента)
-    const buyButton = this.createShopButton(x + gameWidth * 0.32, y, 'КУПИТЬ', () => {
+    const buyButton = this.createShopButton(x + gameWidth * 0.28, y, 'КУПИТЬ', () => {
       this.buyItem(item);
     });
   }
@@ -638,32 +638,39 @@ class PromotionsScene extends Phaser.Scene {
     // Фон
     this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x222222);
 
-    // Заголовок
-    this.add.text(gameWidth / 2, gameHeight * 0.08, 'АКЦИИ И ПРЕДЛОЖЕНИЯ', {
-      font: 'bold 30px Commissioner',
+    // Заголовок в две строки
+    this.add.text(gameWidth / 2, gameHeight * 0.05, 'АКЦИИ И', {
+      font: 'bold 28px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+
+    this.add.text(gameWidth / 2, gameHeight * 0.1, 'ПРЕДЛОЖЕНИЯ', {
+      font: 'bold 28px Commissioner',
       fill: '#FFEE00',
       stroke: '#222222',
       strokeThickness: 2
     }).setOrigin(0.5);
 
     // Ежедневная реклама
-    this.createDailyReward(gameWidth / 2, gameHeight * 0.22);
+    this.createDailyReward(gameWidth / 2, gameHeight * 0.25);
     
     // Двойные алмазы в выходные
-    this.createPromotion(gameWidth / 2, gameHeight * 0.35, 'Двойные алмазы в выходные!', null);
+    this.createPromotion(gameWidth / 2, gameHeight * 0.38, 'Двойные алмазы в выходные!', null);
     
     // Специальное предложение недели
-    this.createPromotion(gameWidth / 2, gameHeight * 0.48, 'Специальное предложение недели', () => {
+    this.createPromotion(gameWidth / 2, gameHeight * 0.51, 'Специальное предложение недели', () => {
       this.openLink('https://koreanaparts.ru/specpredlozheniya-i-akcii-kompanii-koreana-sankt-peterburg');
     });
     
     // Мем за алмаз
-    this.createPromotion(gameWidth / 2, gameHeight * 0.61, 'Мем за алмаз', () => {
+    this.createPromotion(gameWidth / 2, gameHeight * 0.64, 'Мем за алмаз', () => {
       this.openLink('https://www.anekdot.ru/last/mem/');
     });
 
     // Кнопка назад
-    this.createBackButton(gameWidth * 0.15, gameHeight * 0.9, 'НАЗАД', () => {
+    this.createBackButton(gameWidth * 0.15, gameHeight * 0.82, 'НАЗАД', () => {
       this.scene.start('MenuScene');
     });
   }
@@ -710,10 +717,10 @@ class PromotionsScene extends Phaser.Scene {
     const promoBg = this.add.graphics();
     const bgColor = canClaim ? 0xFFEE00 : 0xC8C8C8;
     const strokeColor = canClaim ? 0x222222 : 0x666666;
-    promoBg.fillStyle(bgColor, 0.9);
-    promoBg.fillRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+    promoBg.fillStyle(bgColor, 0.2);
+    promoBg.fillRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
     promoBg.lineStyle(2, strokeColor);
-    promoBg.strokeRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+    promoBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
 
     const text = canClaim ? 'Ежедневная реклама +1 алмаз (Доступно!)' : 'Ежедневная реклама +1 алмаз (Недоступно)';
     const color = canClaim ? '#222222' : '#666666';
@@ -732,10 +739,10 @@ class PromotionsScene extends Phaser.Scene {
             rewardText.setFill('#666666');
             // Перерисовываем фон
             promoBg.clear();
-            promoBg.fillStyle(0xC8C8C8, 0.9);
-            promoBg.fillRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+            promoBg.fillStyle(0xC8C8C8, 0.2);
+            promoBg.fillRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
             promoBg.lineStyle(2, 0x666666);
-            promoBg.strokeRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+            promoBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
             rewardText.removeInteractive();
           }
         })
@@ -755,10 +762,10 @@ class PromotionsScene extends Phaser.Scene {
     const promoBg = this.add.graphics();
     const bgColor = callback ? 0x222222 : 0xC8C8C8;
     const strokeColor = callback ? 0xFFEE00 : 0x222222;
-    promoBg.fillStyle(bgColor, 0.9);
-    promoBg.fillRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+    promoBg.fillStyle(bgColor, 0.2);
+    promoBg.fillRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
     promoBg.lineStyle(2, strokeColor);
-    promoBg.strokeRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+    promoBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
 
     const promoText = this.add.text(x, y, text, {
       font: 'bold 14px Commissioner',
@@ -772,20 +779,20 @@ class PromotionsScene extends Phaser.Scene {
           promoText.setScale(1.05);
           // Эффект наведения - инвертируем цвета
           promoBg.clear();
-          promoBg.fillStyle(0xFFEE00, 0.9);
-          promoBg.fillRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+          promoBg.fillStyle(0xFFEE00, 0.2);
+          promoBg.fillRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
           promoBg.lineStyle(2, 0x222222);
-          promoBg.strokeRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+          promoBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
           promoText.setFill('#222222');
         })
         .on('pointerout', () => {
           promoText.setScale(1);
           // Возвращаем обычные цвета
           promoBg.clear();
-          promoBg.fillStyle(0x222222, 0.9);
-          promoBg.fillRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+          promoBg.fillStyle(0x222222, 0.2);
+          promoBg.fillRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
           promoBg.lineStyle(2, 0xFFEE00);
-          promoBg.strokeRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+          promoBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
           promoText.setFill('#FFEE00');
         });
     }
