@@ -5,15 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Yellow Car Game</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Commissioner:wght@400;700&display=swap');
+    
     body { 
       margin: 0; 
       overflow: hidden; 
-      background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+      background: #222222;
+      font-family: 'Commissioner', sans-serif;
     }
     canvas { 
       display: block; 
       background: transparent;
-      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      box-shadow: 0 0 20px rgba(255, 238, 0, 0.3);
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
@@ -95,7 +98,7 @@ class MenuScene extends Phaser.Scene {
     const gameHeight = this.sys.game.config.height;
 
     // Фон
-    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x1a1a2e);
+    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x222222);
 
     // Обновляем баланс при входе в меню и сбрасываем для тестирования
     this.events.on('wake', () => {
@@ -106,29 +109,29 @@ class MenuScene extends Phaser.Scene {
     GameData.resetDiamonds();
 
     // Заголовок
-    this.add.text(gameWidth / 2, gameHeight * 0.15, 'АВТОГОНКИ', {
-      font: 'bold 42px Arial',
-      fill: '#FFD700',
-      stroke: '#000',
-      strokeThickness: 4
+    this.add.text(gameWidth / 2, gameHeight * 0.15, 'АВТОСЕРВИС КОРЕАНА', {
+      font: 'bold 36px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
     }).setOrigin(0.5);
 
     // Баланс алмазов (центрировано под заголовком)
     const diamonds = GameData.getDiamonds();
     this.diamondsText = this.add.text(gameWidth / 2, gameHeight * 0.25, `💎 ${diamonds}`, {
-      font: 'bold 28px Arial',
-      fill: '#00FFFF',
-      stroke: '#000',
-      strokeThickness: 2
+      font: 'bold 24px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 1
     }).setOrigin(0.5);
 
     // Кнопки меню
     const buttonStyle = {
-      font: 'bold 24px Arial',
-      fill: '#fff',
-      backgroundColor: '#0066cc',
-      stroke: '#000',
-      strokeThickness: 2
+      font: 'bold 20px Commissioner',
+      fill: '#222222',
+      backgroundColor: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 1
     };
 
     const playButton = this.createButton(gameWidth / 2, gameHeight * 0.38, 'ИГРАТЬ', buttonStyle, () => {
@@ -149,18 +152,32 @@ class MenuScene extends Phaser.Scene {
   }
 
   createButton(x, y, text, style, callback) {
+    // Создаем фон кнопки со скруглениями
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0xFFEE00);
+    buttonBg.fillRoundedRect(x - 120, y - 25, 240, 50, 15);
+    buttonBg.lineStyle(2, 0x222222);
+    buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
+
     const button = this.add.text(x, y, text, style)
       .setOrigin(0.5)
-      .setPadding(20, 15)
       .setInteractive()
       .on('pointerdown', callback)
       .on('pointerover', () => {
-        button.setScale(1.1);
-        button.setFill('#44ff44');
+        buttonBg.clear();
+        buttonBg.fillStyle(0xC8C8C8);
+        buttonBg.fillRoundedRect(x - 120, y - 25, 240, 50, 15);
+        buttonBg.lineStyle(2, 0xFFEE00);
+        buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
+        button.setFill('#FFEE00');
       })
       .on('pointerout', () => {
-        button.setScale(1);
-        button.setFill('#fff');
+        buttonBg.clear();
+        buttonBg.fillStyle(0xFFEE00);
+        buttonBg.fillRoundedRect(x - 120, y - 25, 240, 50, 15);
+        buttonBg.lineStyle(2, 0x222222);
+        buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
+        button.setFill('#222222');
       });
     return button;
   }
@@ -168,6 +185,12 @@ class MenuScene extends Phaser.Scene {
   updateDiamondsDisplay() {
     const diamonds = GameData.getDiamonds();
     this.diamondsText.setText(`💎 ${diamonds}`);
+    this.diamondsText.setStyle({
+      font: 'bold 24px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 1
+    });
   }
 }
 
@@ -182,23 +205,23 @@ class ShopScene extends Phaser.Scene {
     const gameHeight = this.sys.game.config.height;
 
     // Фон
-    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x2a2a2a);
+    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x222222);
 
     // Заголовок
-    this.add.text(gameWidth / 2, gameHeight * 0.08, 'МАГАЗИН', {
-      font: 'bold 36px Arial',
-      fill: '#FFD700',
-      stroke: '#000',
-      strokeThickness: 3
+    this.add.text(gameWidth / 2, gameHeight * 0.08, 'МАГАЗИН ЗАПЧАСТЕЙ', {
+      font: 'bold 32px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
     }).setOrigin(0.5);
 
     // Баланс
     const diamonds = GameData.getDiamonds();
     this.diamondsText = this.add.text(gameWidth / 2, gameHeight * 0.15, `Баланс: 💎 ${diamonds}`, {
-      font: 'bold 26px Arial',
-      fill: '#00FFFF',
-      stroke: '#000',
-      strokeThickness: 2
+      font: 'bold 22px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 1
     }).setOrigin(0.5);
 
     // Товары
@@ -215,15 +238,77 @@ class ShopScene extends Phaser.Scene {
     });
 
     // Кнопка назад
-    this.createButton(gameWidth * 0.15, gameHeight * 0.9, 'НАЗАД', {
-      font: 'bold 24px Arial',
-      fill: '#fff',
-      backgroundColor: '#666',
-      stroke: '#000',
-      strokeThickness: 2
-    }, () => {
+    this.createBackButton(gameWidth * 0.15, gameHeight * 0.9, 'НАЗАД', () => {
       this.scene.start('MenuScene');
     });
+  }
+
+  createShopButton(x, y, text, callback) {
+    // Создаем фон кнопки со скруглениями
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0xFFEE00);
+    buttonBg.fillRoundedRect(x - 40, y - 15, 80, 30, 12);
+    buttonBg.lineStyle(2, 0x222222);
+    buttonBg.strokeRoundedRect(x - 40, y - 15, 80, 30, 12);
+
+    const button = this.add.text(x, y, text, {
+      font: 'bold 12px Commissioner',
+      fill: '#222222'
+    })
+      .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0x222222);
+        buttonBg.fillRoundedRect(x - 40, y - 15, 80, 30, 12);
+        buttonBg.lineStyle(2, 0xFFEE00);
+        buttonBg.strokeRoundedRect(x - 40, y - 15, 80, 30, 12);
+        button.setFill('#FFEE00');
+      })
+      .on('pointerout', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0xFFEE00);
+        buttonBg.fillRoundedRect(x - 40, y - 15, 80, 30, 12);
+        buttonBg.lineStyle(2, 0x222222);
+        buttonBg.strokeRoundedRect(x - 40, y - 15, 80, 30, 12);
+        button.setFill('#222222');
+      });
+    return button;
+  }
+
+  createBackButton(x, y, text, callback) {
+    // Создаем фон кнопки со скруглениями
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0x222222);
+    buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+    buttonBg.lineStyle(2, 0xC8C8C8);
+    buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+
+    const button = this.add.text(x, y, text, {
+      font: 'bold 16px Commissioner',
+      fill: '#C8C8C8'
+    })
+      .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0xC8C8C8);
+        buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+        buttonBg.lineStyle(2, 0x222222);
+        buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+        button.setFill('#222222');
+      })
+      .on('pointerout', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0x222222);
+        buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+        buttonBg.lineStyle(2, 0xC8C8C8);
+        buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+        button.setFill('#C8C8C8');
+      });
+    return button;
   }
 
   createShopItem(x, y, item) {
@@ -231,38 +316,35 @@ class ShopScene extends Phaser.Scene {
     const gameHeight = this.sys.game.config.height;
     
     // Фон товара
-    const itemBg = this.add.rectangle(x, y, gameWidth * 0.9, gameHeight * 0.07, 0x444444, 0.8);
-    itemBg.setStrokeStyle(2, 0xFFFFFF);
+    const itemBg = this.add.graphics();
+    itemBg.fillStyle(0xC8C8C8, 0.2);
+    itemBg.fillRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 12);
+    itemBg.lineStyle(2, 0xC8C8C8);
+    itemBg.strokeRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 12);
 
     // Название товара
     this.add.text(x - gameWidth * 0.35, y - gameHeight * 0.012, item.name, {
-      font: 'bold 18px Arial',
-      fill: '#FFD700',
-      stroke: '#000',
+      font: 'bold 16px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
       strokeThickness: 1
     }).setOrigin(0, 0.5);
 
     // Описание
     this.add.text(x - gameWidth * 0.35, y + gameHeight * 0.012, item.description, {
-      font: '12px Arial',
-      fill: '#ccc'
+      font: '12px Commissioner',
+      fill: '#C8C8C8'
     }).setOrigin(0, 0.5);
 
     // Цена
     this.add.text(x + gameWidth * 0.15, y - gameHeight * 0.008, `💎 ${item.price}`, {
-      font: 'bold 16px Arial',
-      fill: '#00FFFF',
-      stroke: '#000',
+      font: 'bold 14px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
       strokeThickness: 1
     }).setOrigin(0.5, 0.5);
 
-    const buyButton = this.createButton(x + gameWidth * 0.25, y + gameHeight * 0.012, 'КУПИТЬ', {
-      font: 'bold 14px Arial',
-      fill: '#fff',
-      backgroundColor: '#00aa00',
-      stroke: '#000',
-      strokeThickness: 1
-    }, () => {
+    const buyButton = this.createShopButton(x + gameWidth * 0.25, y + gameHeight * 0.012, 'КУПИТЬ', () => {
       this.buyItem(item);
     });
   }
@@ -416,20 +498,35 @@ class ShopScene extends Phaser.Scene {
 
   showMessage(text) {
     const gameHeight = this.sys.game.config.height;
+    
+    // Создаем фон уведомления
+    const messageBg = this.add.graphics();
+    messageBg.fillStyle(0x222222, 0.9);
+    messageBg.fillRoundedRect(this.sys.game.config.width / 2 - 150, gameHeight * 0.85 - 25, 300, 50, 15);
+    messageBg.lineStyle(2, 0xFFEE00);
+    messageBg.strokeRoundedRect(this.sys.game.config.width / 2 - 150, gameHeight * 0.85 - 25, 300, 50, 15);
+    
     const message = this.add.text(this.sys.game.config.width / 2, gameHeight * 0.85, text, {
-      font: 'bold 18px Arial',
-      fill: '#ff0000',
-      backgroundColor: '#000',
-      stroke: '#fff',
-      strokeThickness: 1
-    }).setOrigin(0.5).setPadding(8);
+      font: 'bold 16px Commissioner',
+      fill: '#FFEE00',
+      align: 'center'
+    }).setOrigin(0.5);
 
-    this.time.delayedCall(2000, () => message.destroy());
+    this.time.delayedCall(2000, () => {
+      message.destroy();
+      messageBg.destroy();
+    });
   }
 
   updateDiamondsDisplay() {
     const diamonds = GameData.getDiamonds();
     this.diamondsText.setText(`Баланс: 💎 ${diamonds}`);
+    this.diamondsText.setStyle({
+      font: 'bold 22px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 1
+    });
   }
 
   createButton(x, y, text, style, callback) {
@@ -459,14 +556,14 @@ class PromotionsScene extends Phaser.Scene {
     const gameHeight = this.sys.game.config.height;
 
     // Фон
-    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x1a4a1a);
+    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x222222);
 
     // Заголовок
-    this.add.text(gameWidth / 2, gameHeight * 0.08, 'АКЦИИ', {
-      font: 'bold 36px Arial',
-      fill: '#FFD700',
-      stroke: '#000',
-      strokeThickness: 3
+    this.add.text(gameWidth / 2, gameHeight * 0.08, 'АКЦИИ И ПРЕДЛОЖЕНИЯ', {
+      font: 'bold 30px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
     }).setOrigin(0.5);
 
     // Ежедневная реклама
@@ -486,15 +583,43 @@ class PromotionsScene extends Phaser.Scene {
     });
 
     // Кнопка назад
-    this.createButton(gameWidth * 0.15, gameHeight * 0.9, 'НАЗАД', {
-      font: 'bold 24px Arial',
-      fill: '#fff',
-      backgroundColor: '#666',
-      stroke: '#000',
-      strokeThickness: 2
-    }, () => {
+    this.createBackButton(gameWidth * 0.15, gameHeight * 0.9, 'НАЗАД', () => {
       this.scene.start('MenuScene');
     });
+  }
+
+  createBackButton(x, y, text, callback) {
+    // Создаем фон кнопки со скруглениями
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0x222222);
+    buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+    buttonBg.lineStyle(2, 0xC8C8C8);
+    buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+
+    const button = this.add.text(x, y, text, {
+      font: 'bold 16px Commissioner',
+      fill: '#C8C8C8'
+    })
+      .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0xC8C8C8);
+        buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+        buttonBg.lineStyle(2, 0x222222);
+        buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+        button.setFill('#222222');
+      })
+      .on('pointerout', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0x222222);
+        buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+        buttonBg.lineStyle(2, 0xC8C8C8);
+        buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+        button.setFill('#C8C8C8');
+      });
+    return button;
   }
 
   createDailyReward(x, y) {
@@ -502,35 +627,43 @@ class PromotionsScene extends Phaser.Scene {
     const gameHeight = this.sys.game.config.height;
     const canClaim = GameData.canClaimDailyReward();
     
-    const promoBg = this.add.rectangle(x, y, gameWidth * 0.9, gameHeight * 0.07, 0x444444, 0.8);
-    promoBg.setStrokeStyle(2, canClaim ? 0x00FF00 : 0x666666);
+    const promoBg = this.add.graphics();
+    const bgColor = canClaim ? 0xFFEE00 : 0xC8C8C8;
+    const strokeColor = canClaim ? 0x222222 : 0x666666;
+    promoBg.fillStyle(bgColor, 0.9);
+    promoBg.fillRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+    promoBg.lineStyle(2, strokeColor);
+    promoBg.strokeRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
 
     const text = canClaim ? 'Ежедневная реклама +1 алмаз (Доступно!)' : 'Ежедневная реклама +1 алмаз (Недоступно)';
-    const color = canClaim ? '#00FF00' : '#888888';
+    const color = canClaim ? '#222222' : '#666666';
     
     const rewardText = this.add.text(x, y, text, {
-      font: 'bold 16px Arial',
-      fill: color,
-      stroke: '#000',
-      strokeThickness: 1
+      font: 'bold 14px Commissioner',
+      fill: color
     }).setOrigin(0.5);
 
     if (canClaim) {
-      promoBg.setInteractive()
+      rewardText.setInteractive()
         .on('pointerdown', () => {
           if (GameData.claimDailyReward()) {
             this.showMessage('Получен 1 алмаз! Возвращайтесь завтра!');
             rewardText.setText('Ежедневная реклама +1 алмаз (Недоступно)');
-            rewardText.setFill('#888888');
-            promoBg.setStrokeStyle(2, 0x666666);
-            promoBg.removeInteractive();
+            rewardText.setFill('#666666');
+            // Перерисовываем фон
+            promoBg.clear();
+            promoBg.fillStyle(0xC8C8C8, 0.9);
+            promoBg.fillRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+            promoBg.lineStyle(2, 0x666666);
+            promoBg.strokeRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+            rewardText.removeInteractive();
           }
         })
         .on('pointerover', () => {
-          promoBg.setScale(1.05);
+          rewardText.setScale(1.05);
         })
         .on('pointerout', () => {
-          promoBg.setScale(1);
+          rewardText.setScale(1);
         });
     }
   }
@@ -538,41 +671,66 @@ class PromotionsScene extends Phaser.Scene {
   createPromotion(x, y, text, callback) {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
-    const promoBg = this.add.rectangle(x, y, gameWidth * 0.9, gameHeight * 0.07, 0x444444, 0.8);
-    promoBg.setStrokeStyle(2, callback ? 0x0066cc : 0x00FF00);
+    
+    const promoBg = this.add.graphics();
+    const bgColor = callback ? 0x222222 : 0xC8C8C8;
+    const strokeColor = callback ? 0xFFEE00 : 0x222222;
+    promoBg.fillStyle(bgColor, 0.9);
+    promoBg.fillRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+    promoBg.lineStyle(2, strokeColor);
+    promoBg.strokeRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
 
     const promoText = this.add.text(x, y, text, {
-      font: 'bold 16px Arial',
-      fill: callback ? '#00AAFF' : '#fff',
-      stroke: '#000',
-      strokeThickness: 1
+      font: 'bold 14px Commissioner',
+      fill: callback ? '#FFEE00' : '#222222'
     }).setOrigin(0.5);
 
     if (callback) {
-      promoBg.setInteractive()
+      promoText.setInteractive()
         .on('pointerdown', callback)
         .on('pointerover', () => {
-          promoBg.setScale(1.05);
-          promoText.setFill('#44CCFF');
+          promoText.setScale(1.05);
+          // Эффект наведения - инвертируем цвета
+          promoBg.clear();
+          promoBg.fillStyle(0xFFEE00, 0.9);
+          promoBg.fillRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+          promoBg.lineStyle(2, 0x222222);
+          promoBg.strokeRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+          promoText.setFill('#222222');
         })
         .on('pointerout', () => {
-          promoBg.setScale(1);
-          promoText.setFill('#00AAFF');
+          promoText.setScale(1);
+          // Возвращаем обычные цвета
+          promoBg.clear();
+          promoBg.fillStyle(0x222222, 0.9);
+          promoBg.fillRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+          promoBg.lineStyle(2, 0xFFEE00);
+          promoBg.strokeRoundedRect(x - gameWidth * 0.42, y - gameHeight * 0.03, gameWidth * 0.84, gameHeight * 0.06, 15);
+          promoText.setFill('#FFEE00');
         });
     }
   }
 
   showMessage(text) {
     const gameHeight = this.sys.game.config.height;
+    
+    // Создаем фон уведомления
+    const messageBg = this.add.graphics();
+    messageBg.fillStyle(0x222222, 0.9);
+    messageBg.fillRoundedRect(this.sys.game.config.width / 2 - 150, gameHeight * 0.85 - 25, 300, 50, 15);
+    messageBg.lineStyle(2, 0xFFEE00);
+    messageBg.strokeRoundedRect(this.sys.game.config.width / 2 - 150, gameHeight * 0.85 - 25, 300, 50, 15);
+    
     const message = this.add.text(this.sys.game.config.width / 2, gameHeight * 0.85, text, {
-      font: 'bold 18px Arial',
-      fill: '#00ff00',
-      backgroundColor: '#000',
-      stroke: '#fff',
-      strokeThickness: 1
-    }).setOrigin(0.5).setPadding(8);
+      font: 'bold 16px Commissioner',
+      fill: '#FFEE00',
+      align: 'center'
+    }).setOrigin(0.5);
 
-    this.time.delayedCall(3000, () => message.destroy());
+    this.time.delayedCall(3000, () => {
+      message.destroy();
+      messageBg.destroy();
+    });
   }
 
   openLink(url) {
@@ -611,14 +769,14 @@ class LeaderboardScene extends Phaser.Scene {
     const gameHeight = this.sys.game.config.height;
 
     // Фон
-    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x4a1a4a);
+    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x222222);
 
     // Заголовок
     this.add.text(gameWidth / 2, gameHeight * 0.08, 'ТАБЛИЦА ЛИДЕРОВ', {
-      font: 'bold 32px Arial',
-      fill: '#FFD700',
-      stroke: '#000',
-      strokeThickness: 3
+      font: 'bold 28px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
     }).setOrigin(0.5);
 
     // Получаем рекорды
@@ -626,8 +784,8 @@ class LeaderboardScene extends Phaser.Scene {
 
     if (scores.length === 0) {
       this.add.text(gameWidth / 2, gameHeight * 0.4, 'Пока нет рекордов', {
-        font: 'bold 24px Arial',
-        fill: '#ccc'
+        font: 'bold 20px Commissioner',
+        fill: '#C8C8C8'
       }).setOrigin(0.5);
     } else {
       scores.forEach((score, index) => {
@@ -635,24 +793,52 @@ class LeaderboardScene extends Phaser.Scene {
         const medal = index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}.`;
         
         this.add.text(gameWidth / 2, y, `${medal} ${score} очков`, {
-          font: 'bold 18px Arial',
-          fill: '#fff',
-          stroke: '#000',
+          font: 'bold 16px Commissioner',
+          fill: '#FFEE00',
+          stroke: '#222222',
           strokeThickness: 1
         }).setOrigin(0.5);
       });
     }
 
     // Кнопка назад
-    this.createButton(gameWidth * 0.15, gameHeight * 0.9, 'НАЗАД', {
-      font: 'bold 24px Arial',
-      fill: '#fff',
-      backgroundColor: '#666',
-      stroke: '#000',
-      strokeThickness: 2
-    }, () => {
+    this.createBackButton(gameWidth * 0.15, gameHeight * 0.9, 'НАЗАД', () => {
       this.scene.start('MenuScene');
     });
+  }
+
+  createBackButton(x, y, text, callback) {
+    // Создаем фон кнопки со скруглениями
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0x222222);
+    buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+    buttonBg.lineStyle(2, 0xC8C8C8);
+    buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+
+    const button = this.add.text(x, y, text, {
+      font: 'bold 16px Commissioner',
+      fill: '#C8C8C8'
+    })
+      .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0xC8C8C8);
+        buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+        buttonBg.lineStyle(2, 0x222222);
+        buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+        button.setFill('#222222');
+      })
+      .on('pointerout', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0x222222);
+        buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+        buttonBg.lineStyle(2, 0xC8C8C8);
+        buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+        button.setFill('#C8C8C8');
+      });
+    return button;
   }
 
   createButton(x, y, text, style, callback) {
@@ -733,19 +919,18 @@ class MainScene extends Phaser.Scene {
 
     // Улучшенный счет
     this.scoreText = this.add.text(20, 20, 'СЧЕТ: 0', { 
-      font: 'bold 28px Arial', 
-      fill: '#fff',
-      stroke: '#000',
-      strokeThickness: 4,
-      shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 5, fill: true }
+      font: 'bold 24px Commissioner', 
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
     });
 
     // Отображение алмазов
     this.diamondsText = this.add.text(20, 60, `💎 ${GameData.getDiamonds()}`, {
-      font: 'bold 24px Arial',
-      fill: '#00FFFF',
-      stroke: '#000',
-      strokeThickness: 2
+      font: 'bold 20px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 1
     });
 
     this.input.keyboard.on('keydown-LEFT', () => this.changeLane(-1));
@@ -876,6 +1061,12 @@ class MainScene extends Phaser.Scene {
 
   updateDiamondsDisplay() {
     this.diamondsText.setText(`💎 ${GameData.getDiamonds()}`);
+    this.diamondsText.setStyle({
+      font: 'bold 20px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 1
+    });
   }
 
   update(time, delta) {
