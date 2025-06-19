@@ -124,41 +124,27 @@ class MenuScene extends Phaser.Scene {
 
     // Кнопки меню
     const buttonStyle = {
-      font: 'bold 28px Arial',
+      font: 'bold 24px Arial',
       fill: '#fff',
       backgroundColor: '#0066cc',
       stroke: '#000',
       strokeThickness: 2
     };
 
-    const playButton = this.createButton(gameWidth / 2, gameHeight * 0.4, 'ИГРАТЬ', buttonStyle, () => {
+    const playButton = this.createButton(gameWidth / 2, gameHeight * 0.38, 'ИГРАТЬ', buttonStyle, () => {
       this.scene.start('MainScene');
     });
 
-    const shopButton = this.createButton(gameWidth / 2, gameHeight * 0.5, 'МАГАЗИН', buttonStyle, () => {
+    const shopButton = this.createButton(gameWidth / 2, gameHeight * 0.48, 'МАГАЗИН', buttonStyle, () => {
       this.scene.start('ShopScene');
     });
 
-    const promoButton = this.createButton(gameWidth / 2, gameHeight * 0.6, 'АКЦИИ', buttonStyle, () => {
+    const promoButton = this.createButton(gameWidth / 2, gameHeight * 0.58, 'АКЦИИ', buttonStyle, () => {
       this.scene.start('PromotionsScene');
     });
 
-    const leaderButton = this.createButton(gameWidth / 2, gameHeight * 0.7, 'ТАБЛИЦА ЛИДЕРОВ', buttonStyle, () => {
+    const leaderButton = this.createButton(gameWidth / 2, gameHeight * 0.68, 'ТАБЛИЦА ЛИДЕРОВ', buttonStyle, () => {
       this.scene.start('LeaderboardScene');
-    });
-
-    // Тестовая кнопка сброса (убрать после тестирования)
-    const resetButton = this.createButton(gameWidth / 2, gameHeight * 0.85, 'СБРОС КЕША (тест)', {
-      font: 'bold 18px Arial',
-      fill: '#fff',
-      backgroundColor: '#ff6600',
-      stroke: '#000',
-      strokeThickness: 2
-    }, () => {
-      localStorage.clear();
-      GameData.resetDiamonds();
-      this.updateDiamondsDisplay();
-      alert('Кеш очищен! Баланс сброшен на 1000 💎');
     });
   }
 
@@ -224,7 +210,7 @@ class ShopScene extends Phaser.Scene {
     ];
 
     items.forEach((item, index) => {
-      const y = gameHeight * 0.25 + index * (gameHeight * 0.12);
+      const y = gameHeight * 0.25 + index * (gameHeight * 0.1);
       this.createShopItem(gameWidth / 2, y, item);
     });
 
@@ -245,33 +231,33 @@ class ShopScene extends Phaser.Scene {
     const gameHeight = this.sys.game.config.height;
     
     // Фон товара
-    const itemBg = this.add.rectangle(x, y, gameWidth * 0.9, gameHeight * 0.08, 0x444444, 0.8);
+    const itemBg = this.add.rectangle(x, y, gameWidth * 0.9, gameHeight * 0.07, 0x444444, 0.8);
     itemBg.setStrokeStyle(2, 0xFFFFFF);
 
     // Название товара
-    this.add.text(x - gameWidth * 0.35, y - gameHeight * 0.015, item.name, {
-      font: 'bold 20px Arial',
+    this.add.text(x - gameWidth * 0.35, y - gameHeight * 0.012, item.name, {
+      font: 'bold 18px Arial',
       fill: '#FFD700',
       stroke: '#000',
-      strokeThickness: 2
+      strokeThickness: 1
     }).setOrigin(0, 0.5);
 
     // Описание
-    this.add.text(x - gameWidth * 0.35, y + gameHeight * 0.015, item.description, {
-      font: '14px Arial',
+    this.add.text(x - gameWidth * 0.35, y + gameHeight * 0.012, item.description, {
+      font: '12px Arial',
       fill: '#ccc'
     }).setOrigin(0, 0.5);
 
     // Цена
-    this.add.text(x + gameWidth * 0.15, y - gameHeight * 0.01, `💎 ${item.price}`, {
-      font: 'bold 18px Arial',
+    this.add.text(x + gameWidth * 0.15, y - gameHeight * 0.008, `💎 ${item.price}`, {
+      font: 'bold 16px Arial',
       fill: '#00FFFF',
       stroke: '#000',
       strokeThickness: 1
     }).setOrigin(0.5, 0.5);
 
-    const buyButton = this.createButton(x + gameWidth * 0.25, y + gameHeight * 0.015, 'КУПИТЬ', {
-      font: 'bold 16px Arial',
+    const buyButton = this.createButton(x + gameWidth * 0.25, y + gameHeight * 0.012, 'КУПИТЬ', {
+      font: 'bold 14px Arial',
       fill: '#fff',
       backgroundColor: '#00aa00',
       stroke: '#000',
@@ -303,27 +289,27 @@ class ShopScene extends Phaser.Scene {
     const overlay = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x000000, 0.7);
 
     // Окно предупреждения
-    const warningBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth * 0.9, gameHeight * 0.6, 0x333333);
+    const warningBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth * 0.85, gameHeight * 0.5, 0x333333);
     warningBox.setStrokeStyle(3, 0xFFFF00);
 
-    const titleText = this.add.text(gameWidth / 2, gameHeight / 2 - gameHeight * 0.22, 'ВНИМАНИЕ!', {
-      font: 'bold 28px Arial',
+    const titleText = this.add.text(gameWidth / 2, gameHeight / 2 - gameHeight * 0.2, 'ВНИМАНИЕ!', {
+      font: 'bold 24px Arial',
       fill: '#FFFF00',
       stroke: '#000',
       strokeThickness: 2
     }).setOrigin(0.5);
 
-    const warningText = this.add.text(gameWidth / 2, gameHeight / 2 - gameHeight * 0.12, 
+    const warningText = this.add.text(gameWidth / 2, gameHeight / 2 - gameHeight * 0.08, 
       'После покупки вы направляетесь\nна уникальную форму записи.\n\nТОЛЬКО ПО НЕЙ ВЫ СМОЖЕТЕ\nПОЛУЧИТЬ СКИДКУ!', {
-      font: 'bold 18px Arial',
+      font: 'bold 16px Arial',
       fill: '#fff',
       stroke: '#000',
       strokeThickness: 1,
       align: 'center'
     }).setOrigin(0.5);
 
-    const continueButton = this.createButton(gameWidth / 2 - gameWidth * 0.15, gameHeight / 2 + gameHeight * 0.15, 'ПРОДОЛЖИТЬ', {
-      font: 'bold 18px Arial',
+    const continueButton = this.createButton(gameWidth / 2 - gameWidth * 0.12, gameHeight / 2 + gameHeight * 0.12, 'ПРОДОЛЖИТЬ', {
+      font: 'bold 16px Arial',
       fill: '#fff',
       backgroundColor: '#00aa00',
       stroke: '#000',
@@ -339,8 +325,8 @@ class ShopScene extends Phaser.Scene {
       }
     });
 
-    const cancelButton = this.createButton(gameWidth / 2 + gameWidth * 0.15, gameHeight / 2 + gameHeight * 0.15, 'ОТМЕНА', {
-      font: 'bold 18px Arial',
+    const cancelButton = this.createButton(gameWidth / 2 + gameWidth * 0.12, gameHeight / 2 + gameHeight * 0.12, 'ОТМЕНА', {
+      font: 'bold 16px Arial',
       fill: '#fff',
       backgroundColor: '#aa0000',
       stroke: '#000',
@@ -429,13 +415,14 @@ class ShopScene extends Phaser.Scene {
   }
 
   showMessage(text) {
-    const message = this.add.text(this.sys.game.config.width / 2, 150, text, {
-      font: 'bold 20px Arial',
+    const gameHeight = this.sys.game.config.height;
+    const message = this.add.text(this.sys.game.config.width / 2, gameHeight * 0.85, text, {
+      font: 'bold 18px Arial',
       fill: '#ff0000',
       backgroundColor: '#000',
       stroke: '#fff',
       strokeThickness: 1
-    }).setOrigin(0.5).setPadding(10);
+    }).setOrigin(0.5).setPadding(8);
 
     this.time.delayedCall(2000, () => message.destroy());
   }
@@ -483,18 +470,18 @@ class PromotionsScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Ежедневная реклама
-    this.createDailyReward(gameWidth / 2, gameHeight * 0.2);
+    this.createDailyReward(gameWidth / 2, gameHeight * 0.22);
     
     // Двойные алмазы в выходные
     this.createPromotion(gameWidth / 2, gameHeight * 0.35, 'Двойные алмазы в выходные!', null);
     
     // Специальное предложение недели
-    this.createPromotion(gameWidth / 2, gameHeight * 0.5, 'Специальное предложение недели', () => {
+    this.createPromotion(gameWidth / 2, gameHeight * 0.48, 'Специальное предложение недели', () => {
       this.openLink('https://koreanaparts.ru/specpredlozheniya-i-akcii-kompanii-koreana-sankt-peterburg');
     });
     
     // Мем за алмаз
-    this.createPromotion(gameWidth / 2, gameHeight * 0.65, 'Мем за алмаз', () => {
+    this.createPromotion(gameWidth / 2, gameHeight * 0.61, 'Мем за алмаз', () => {
       this.openLink('https://www.anekdot.ru/last/mem/');
     });
 
@@ -512,16 +499,17 @@ class PromotionsScene extends Phaser.Scene {
 
   createDailyReward(x, y) {
     const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
     const canClaim = GameData.canClaimDailyReward();
     
-    const promoBg = this.add.rectangle(x, y, gameWidth * 0.9, 60, 0x444444, 0.8);
+    const promoBg = this.add.rectangle(x, y, gameWidth * 0.9, gameHeight * 0.07, 0x444444, 0.8);
     promoBg.setStrokeStyle(2, canClaim ? 0x00FF00 : 0x666666);
 
     const text = canClaim ? 'Ежедневная реклама +1 алмаз (Доступно!)' : 'Ежедневная реклама +1 алмаз (Недоступно)';
     const color = canClaim ? '#00FF00' : '#888888';
     
     const rewardText = this.add.text(x, y, text, {
-      font: 'bold 20px Arial',
+      font: 'bold 16px Arial',
       fill: color,
       stroke: '#000',
       strokeThickness: 1
@@ -549,11 +537,12 @@ class PromotionsScene extends Phaser.Scene {
 
   createPromotion(x, y, text, callback) {
     const gameWidth = this.sys.game.config.width;
-    const promoBg = this.add.rectangle(x, y, gameWidth * 0.9, 60, 0x444444, 0.8);
+    const gameHeight = this.sys.game.config.height;
+    const promoBg = this.add.rectangle(x, y, gameWidth * 0.9, gameHeight * 0.07, 0x444444, 0.8);
     promoBg.setStrokeStyle(2, callback ? 0x0066cc : 0x00FF00);
 
     const promoText = this.add.text(x, y, text, {
-      font: 'bold 20px Arial',
+      font: 'bold 16px Arial',
       fill: callback ? '#00AAFF' : '#fff',
       stroke: '#000',
       strokeThickness: 1
@@ -574,13 +563,14 @@ class PromotionsScene extends Phaser.Scene {
   }
 
   showMessage(text) {
-    const message = this.add.text(this.sys.game.config.width / 2, 120, text, {
-      font: 'bold 20px Arial',
+    const gameHeight = this.sys.game.config.height;
+    const message = this.add.text(this.sys.game.config.width / 2, gameHeight * 0.85, text, {
+      font: 'bold 18px Arial',
       fill: '#00ff00',
       backgroundColor: '#000',
       stroke: '#fff',
       strokeThickness: 1
-    }).setOrigin(0.5).setPadding(10);
+    }).setOrigin(0.5).setPadding(8);
 
     this.time.delayedCall(3000, () => message.destroy());
   }
@@ -641,11 +631,11 @@ class LeaderboardScene extends Phaser.Scene {
       }).setOrigin(0.5);
     } else {
       scores.forEach((score, index) => {
-        const y = gameHeight * 0.25 + index * (gameHeight * 0.05);
+        const y = gameHeight * 0.22 + index * (gameHeight * 0.045);
         const medal = index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}.`;
         
         this.add.text(gameWidth / 2, y, `${medal} ${score} очков`, {
-          font: 'bold 20px Arial',
+          font: 'bold 18px Arial',
           fill: '#fff',
           stroke: '#000',
           strokeThickness: 1
