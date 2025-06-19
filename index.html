@@ -278,19 +278,19 @@ class ShopScene extends Phaser.Scene {
     const confirmBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, 400, 250, 0x333333);
     confirmBox.setStrokeStyle(3, 0xFFFFFF);
 
-    this.add.text(gameWidth / 2, gameHeight / 2 - 60, 'ПОКУПКА СОВЕРШЕНА!', {
+    const titleText = this.add.text(gameWidth / 2, gameHeight / 2 - 60, 'ПОКУПКА СОВЕРШЕНА!', {
       font: 'bold 24px Arial',
       fill: '#00ff00',
       stroke: '#000',
       strokeThickness: 2
     }).setOrigin(0.5);
 
-    this.add.text(gameWidth / 2, gameHeight / 2 - 20, `${item.name} приобретен!`, {
+    const itemText = this.add.text(gameWidth / 2, gameHeight / 2 - 20, `${item.name} приобретен!`, {
       font: '18px Arial',
       fill: '#fff'
     }).setOrigin(0.5);
 
-    this.add.text(gameWidth / 2, gameHeight / 2 + 10, 'Перейти на сайт?', {
+    const questionText = this.add.text(gameWidth / 2, gameHeight / 2 + 10, 'Перейти на сайт?', {
       font: '16px Arial',
       fill: '#ccc'
     }).setOrigin(0.5);
@@ -302,9 +302,8 @@ class ShopScene extends Phaser.Scene {
       stroke: '#000',
       strokeThickness: 2
     }, () => {
-      window.open('https://koreanaparts.ru/block/119', '_blank');
-      overlay.destroy();
-      confirmBox.destroy();
+      this.openLink('https://koreanaparts.ru/block/119');
+      this.destroyConfirmDialog(overlay, confirmBox, titleText, itemText, questionText, yesButton, noButton);
     });
 
     const noButton = this.createButton(gameWidth / 2 + 80, gameHeight / 2 + 60, 'НЕТ', {
@@ -314,9 +313,27 @@ class ShopScene extends Phaser.Scene {
       stroke: '#000',
       strokeThickness: 2
     }, () => {
-      overlay.destroy();
-      confirmBox.destroy();
+      this.destroyConfirmDialog(overlay, confirmBox, titleText, itemText, questionText, yesButton, noButton);
     });
+  }
+
+  destroyConfirmDialog(overlay, confirmBox, titleText, itemText, questionText, yesButton, noButton) {
+    overlay.destroy();
+    confirmBox.destroy();
+    titleText.destroy();
+    itemText.destroy();
+    questionText.destroy();
+    yesButton.destroy();
+    noButton.destroy();
+  }
+
+  openLink(url) {
+    // Для мобильных устройств используем location.href
+    if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
+      location.href = url;
+    } else {
+      window.open(url, '_blank');
+    }
   }
 
   showMessage(text) {
@@ -381,12 +398,12 @@ class PromotionsScene extends Phaser.Scene {
     
     // Специальное предложение недели
     this.createPromotion(gameWidth / 2, 310, 'Специальное предложение недели', () => {
-      window.open('https://koreanaparts.ru/specpredlozheniya-i-akcii-kompanii-koreana-sankt-peterburg', '_blank');
+      this.openLink('https://koreanaparts.ru/specpredlozheniya-i-akcii-kompanii-koreana-sankt-peterburg');
     });
     
     // Мем за алмаз
     this.createPromotion(gameWidth / 2, 390, 'Мем за алмаз', () => {
-      window.open('https://www.anekdot.ru/last/mem/', '_blank');
+      this.openLink('https://www.anekdot.ru/last/mem/');
     });
 
     // Кнопка назад
@@ -474,6 +491,15 @@ class PromotionsScene extends Phaser.Scene {
     }).setOrigin(0.5).setPadding(10);
 
     this.time.delayedCall(3000, () => message.destroy());
+  }
+
+  openLink(url) {
+    // Для мобильных устройств используем location.href
+    if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
+      location.href = url;
+    } else {
+      window.open(url, '_blank');
+    }
   }
 
   createButton(x, y, text, style, callback) {
