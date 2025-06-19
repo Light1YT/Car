@@ -423,8 +423,8 @@ class ShopScene extends Phaser.Scene {
       strokeThickness: 1
     }).setOrigin(0.5, 0.5);
 
-    // Кнопка купить (смещена дальше вправо)
-    const buyButton = this.createShopButton(x + gameWidth * 0.32, y + gameHeight * 0.012, 'КУПИТЬ', () => {
+    // Кнопка купить (поднята на уровень центра элемента)
+    const buyButton = this.createShopButton(x + gameWidth * 0.32, y, 'КУПИТЬ', () => {
       this.buyItem(item);
     });
   }
