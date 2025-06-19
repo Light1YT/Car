@@ -21,6 +21,451 @@
 <body>
 
 <script>
+// Система сохранения данных
+class GameData {
+  static save(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+  
+  static load(key, defaultValue = null) {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : defaultValue;
+  }
+  
+  static addDiamonds(amount) {
+    const current = this.load('diamonds', 0);
+    this.save('diamonds', current + amount);
+  }
+  
+  static getDiamonds() {
+    return this.load('diamonds', 0);
+  }
+  
+  static spendDiamonds(amount) {
+    const current = this.getDiamonds();
+    if (current >= amount) {
+      this.save('diamonds', current - amount);
+      return true;
+    }
+    return false;
+  }
+  
+  static saveScore(score) {
+    const scores = this.load('scores', []);
+    scores.push(Math.floor(score));
+    scores.sort((a, b) => b - a);
+    scores.splice(10); // Оставляем только топ-10
+    this.save('scores', scores);
+  }
+  
+  static getTopScores() {
+    return this.load('scores', []);
+  }
+}
+
+// Главное меню
+class MenuScene extends Phaser.Scene {
+  constructor() {
+    super('MenuScene');
+  }
+
+  create() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Фон
+    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x1a1a2e);
+
+    // Заголовок
+    this.add.text(gameWidth / 2, gameHeight * 0.2, 'АВТОГОНКИ', {
+      font: 'bold 48px Arial',
+      fill: '#FFD700',
+      stroke: '#000',
+      strokeThickness: 4
+    }).setOrigin(0.5);
+
+    // Баланс алмазов
+    const diamonds = GameData.getDiamonds();
+    this.add.text(gameWidth - 20, 20, `💎 ${diamonds}`, {
+      font: 'bold 24px Arial',
+      fill: '#00FFFF',
+      stroke: '#000',
+      strokeThickness: 2
+    }).setOrigin(1, 0);
+
+    // Кнопки меню
+    const buttonStyle = {
+      font: 'bold 28px Arial',
+      fill: '#fff',
+      backgroundColor: '#0066cc',
+      stroke: '#000',
+      strokeThickness: 2
+    };
+
+    const playButton = this.createButton(gameWidth / 2, gameHeight * 0.4, 'ИГРАТЬ', buttonStyle, () => {
+      this.scene.start('MainScene');
+    });
+
+    const shopButton = this.createButton(gameWidth / 2, gameHeight * 0.52, 'МАГАЗИН', buttonStyle, () => {
+      this.scene.start('ShopScene');
+    });
+
+    const promoButton = this.createButton(gameWidth / 2, gameHeight * 0.64, 'АКЦИИ', buttonStyle, () => {
+      this.scene.start('PromotionsScene');
+    });
+
+    const leaderButton = this.createButton(gameWidth / 2, gameHeight * 0.76, 'ТАБЛИЦА ЛИДЕРОВ', buttonStyle, () => {
+      this.scene.start('LeaderboardScene');
+    });
+  }
+
+  createButton(x, y, text, style, callback) {
+    const button = this.add.text(x, y, text, style)
+      .setOrigin(0.5)
+      .setPadding(20, 15)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        button.setScale(1.1);
+        button.setFill('#44ff44');
+      })
+      .on('pointerout', () => {
+        button.setScale(1);
+        button.setFill('#fff');
+      });
+    return button;
+  }
+}
+
+// Магазин
+class ShopScene extends Phaser.Scene {
+  constructor() {
+    super('ShopScene');
+  }
+
+  create() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Фон
+    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x2a2a2a);
+
+    // Заголовок
+    this.add.text(gameWidth / 2, 60, 'МАГАЗИН', {
+      font: 'bold 36px Arial',
+      fill: '#FFD700',
+      stroke: '#000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+
+    // Баланс
+    const diamonds = GameData.getDiamonds();
+    this.diamondsText = this.add.text(gameWidth / 2, 110, `Баланс: 💎 ${diamonds}`, {
+      font: 'bold 24px Arial',
+      fill: '#00FFFF',
+      stroke: '#000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+
+    // Товары
+    const items = [
+      { name: 'Скидка 10%', price: 15, description: 'Скидка на все покупки' },
+      { name: 'Скидка 15%', price: 25, description: 'Увеличенная скидка' },
+      { name: 'Скидка 20%', price: 50, description: 'Максимальная скидка' },
+      { name: 'Будильник', price: 15, description: 'Специальный предмет' }
+    ];
+
+    items.forEach((item, index) => {
+      const y = 200 + index * 120;
+      this.createShopItem(gameWidth / 2, y, item);
+    });
+
+    // Кнопка назад
+    this.createButton(100, gameHeight - 60, 'НАЗАД', {
+      font: 'bold 24px Arial',
+      fill: '#fff',
+      backgroundColor: '#666',
+      stroke: '#000',
+      strokeThickness: 2
+    }, () => {
+      this.scene.start('MenuScene');
+    });
+  }
+
+  createShopItem(x, y, item) {
+    // Фон товара
+    const itemBg = this.add.rectangle(x, y, this.sys.game.config.width * 0.8, 100, 0x444444, 0.8);
+    itemBg.setStrokeStyle(2, 0xFFFFFF);
+
+    // Название товара
+    this.add.text(x - 200, y - 20, item.name, {
+      font: 'bold 22px Arial',
+      fill: '#FFD700',
+      stroke: '#000',
+      strokeThickness: 2
+    }).setOrigin(0, 0.5);
+
+    // Описание
+    this.add.text(x - 200, y + 10, item.description, {
+      font: '16px Arial',
+      fill: '#ccc'
+    }).setOrigin(0, 0.5);
+
+    // Цена и кнопка
+    this.add.text(x + 100, y - 10, `💎 ${item.price}`, {
+      font: 'bold 20px Arial',
+      fill: '#00FFFF',
+      stroke: '#000',
+      strokeThickness: 1
+    }).setOrigin(0, 0.5);
+
+    const buyButton = this.createButton(x + 150, y + 20, 'КУПИТЬ', {
+      font: 'bold 18px Arial',
+      fill: '#fff',
+      backgroundColor: '#00aa00',
+      stroke: '#000',
+      strokeThickness: 1
+    }, () => {
+      this.buyItem(item);
+    });
+  }
+
+  buyItem(item) {
+    if (GameData.spendDiamonds(item.price)) {
+      this.showPurchaseConfirmation(item);
+      this.updateDiamondsDisplay();
+    } else {
+      this.showMessage('Недостаточно алмазов!');
+    }
+  }
+
+  showPurchaseConfirmation(item) {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Затемнение
+    const overlay = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x000000, 0.7);
+
+    // Окно подтверждения
+    const confirmBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, 400, 250, 0x333333);
+    confirmBox.setStrokeStyle(3, 0xFFFFFF);
+
+    this.add.text(gameWidth / 2, gameHeight / 2 - 60, 'ПОКУПКА СОВЕРШЕНА!', {
+      font: 'bold 24px Arial',
+      fill: '#00ff00',
+      stroke: '#000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+
+    this.add.text(gameWidth / 2, gameHeight / 2 - 20, `${item.name} приобретен!`, {
+      font: '18px Arial',
+      fill: '#fff'
+    }).setOrigin(0.5);
+
+    this.add.text(gameWidth / 2, gameHeight / 2 + 10, 'Перейти на сайт?', {
+      font: '16px Arial',
+      fill: '#ccc'
+    }).setOrigin(0.5);
+
+    const yesButton = this.createButton(gameWidth / 2 - 80, gameHeight / 2 + 60, 'ДА', {
+      font: 'bold 20px Arial',
+      fill: '#fff',
+      backgroundColor: '#00aa00',
+      stroke: '#000',
+      strokeThickness: 2
+    }, () => {
+      window.open('https://koreanaparts.ru/block/119', '_blank');
+      overlay.destroy();
+      confirmBox.destroy();
+    });
+
+    const noButton = this.createButton(gameWidth / 2 + 80, gameHeight / 2 + 60, 'НЕТ', {
+      font: 'bold 20px Arial',
+      fill: '#fff',
+      backgroundColor: '#aa0000',
+      stroke: '#000',
+      strokeThickness: 2
+    }, () => {
+      overlay.destroy();
+      confirmBox.destroy();
+    });
+  }
+
+  showMessage(text) {
+    const message = this.add.text(this.sys.game.config.width / 2, 150, text, {
+      font: 'bold 20px Arial',
+      fill: '#ff0000',
+      backgroundColor: '#000',
+      stroke: '#fff',
+      strokeThickness: 1
+    }).setOrigin(0.5).setPadding(10);
+
+    this.time.delayedCall(2000, () => message.destroy());
+  }
+
+  updateDiamondsDisplay() {
+    const diamonds = GameData.getDiamonds();
+    this.diamondsText.setText(`Баланс: 💎 ${diamonds}`);
+  }
+
+  createButton(x, y, text, style, callback) {
+    const button = this.add.text(x, y, text, style)
+      .setOrigin(0.5)
+      .setPadding(15, 10)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        button.setScale(1.1);
+      })
+      .on('pointerout', () => {
+        button.setScale(1);
+      });
+    return button;
+  }
+}
+
+// Акции
+class PromotionsScene extends Phaser.Scene {
+  constructor() {
+    super('PromotionsScene');
+  }
+
+  create() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Фон
+    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x1a4a1a);
+
+    // Заголовок
+    this.add.text(gameWidth / 2, 60, 'АКЦИИ', {
+      font: 'bold 36px Arial',
+      fill: '#FFD700',
+      stroke: '#000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+
+    // Акции
+    const promotions = [
+      'Ежедневная награда: +5 💎',
+      'Двойные алмазы в выходные!',
+      'Специальное предложение недели',
+      'Бонус за просмотр рекламы'
+    ];
+
+    promotions.forEach((promo, index) => {
+      const y = 150 + index * 80;
+      const promoBg = this.add.rectangle(gameWidth / 2, y, gameWidth * 0.9, 60, 0x444444, 0.8);
+      promoBg.setStrokeStyle(2, 0x00FF00);
+
+      this.add.text(gameWidth / 2, y, promo, {
+        font: 'bold 20px Arial',
+        fill: '#fff',
+        stroke: '#000',
+        strokeThickness: 1
+      }).setOrigin(0.5);
+    });
+
+    // Кнопка назад
+    this.createButton(100, gameHeight - 60, 'НАЗАД', {
+      font: 'bold 24px Arial',
+      fill: '#fff',
+      backgroundColor: '#666',
+      stroke: '#000',
+      strokeThickness: 2
+    }, () => {
+      this.scene.start('MenuScene');
+    });
+  }
+
+  createButton(x, y, text, style, callback) {
+    const button = this.add.text(x, y, text, style)
+      .setOrigin(0.5)
+      .setPadding(15, 10)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        button.setScale(1.1);
+      })
+      .on('pointerout', () => {
+        button.setScale(1);
+      });
+    return button;
+  }
+}
+
+// Таблица лидеров
+class LeaderboardScene extends Phaser.Scene {
+  constructor() {
+    super('LeaderboardScene');
+  }
+
+  create() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Фон
+    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x4a1a4a);
+
+    // Заголовок
+    this.add.text(gameWidth / 2, 60, 'ТАБЛИЦА ЛИДЕРОВ', {
+      font: 'bold 36px Arial',
+      fill: '#FFD700',
+      stroke: '#000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+
+    // Получаем рекорды
+    const scores = GameData.getTopScores();
+
+    if (scores.length === 0) {
+      this.add.text(gameWidth / 2, gameHeight / 2, 'Пока нет рекордов', {
+        font: 'bold 24px Arial',
+        fill: '#ccc'
+      }).setOrigin(0.5);
+    } else {
+      scores.forEach((score, index) => {
+        const y = 150 + index * 40;
+        const medal = index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}.`;
+        
+        this.add.text(gameWidth / 2, y, `${medal} ${score} очков`, {
+          font: 'bold 22px Arial',
+          fill: '#fff',
+          stroke: '#000',
+          strokeThickness: 1
+        }).setOrigin(0.5);
+      });
+    }
+
+    // Кнопка назад
+    this.createButton(100, gameHeight - 60, 'НАЗАД', {
+      font: 'bold 24px Arial',
+      fill: '#fff',
+      backgroundColor: '#666',
+      stroke: '#000',
+      strokeThickness: 2
+    }, () => {
+      this.scene.start('MenuScene');
+    });
+  }
+
+  createButton(x, y, text, style, callback) {
+    const button = this.add.text(x, y, text, style)
+      .setOrigin(0.5)
+      .setPadding(15, 10)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        button.setScale(1.1);
+      })
+      .on('pointerout', () => {
+        button.setScale(1);
+      });
+    return button;
+  }
+}
+
+// Основная игра (модифицированная)
 class MainScene extends Phaser.Scene {
   constructor() {
     super('MainScene');
@@ -62,13 +507,21 @@ class MainScene extends Phaser.Scene {
 
     this.obstacles = this.physics.add.group();
     this.bonuses = this.physics.add.group();
+    this.extraBonuses = this.physics.add.group(); // Новая группа для алмазов
 
     this.physics.add.overlap(this.player, this.obstacles, () => this.handleGameOver(), null, this);
     this.physics.add.overlap(this.player, this.bonuses, (player, bonus) => {
       bonus.destroy();
       this.score += 50;
-      // Эффект сбора бонуса
       this.createScoreEffect(bonus.x, bonus.y, '+50');
+    }, null, this);
+
+    // Обработка сбора алмазов
+    this.physics.add.overlap(this.player, this.extraBonuses, (player, diamond) => {
+      diamond.destroy();
+      GameData.addDiamonds(1);
+      this.createScoreEffect(diamond.x, diamond.y, '+1💎');
+      this.updateDiamondsDisplay();
     }, null, this);
 
     // Улучшенный счет
@@ -78,6 +531,14 @@ class MainScene extends Phaser.Scene {
       stroke: '#000',
       strokeThickness: 4,
       shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 5, fill: true }
+    });
+
+    // Отображение алмазов
+    this.diamondsText = this.add.text(20, 60, `💎 ${GameData.getDiamonds()}`, {
+      font: 'bold 24px Arial',
+      fill: '#00FFFF',
+      stroke: '#000',
+      strokeThickness: 2
     });
 
     this.input.keyboard.on('keydown-LEFT', () => this.changeLane(-1));
@@ -102,12 +563,11 @@ class MainScene extends Phaser.Scene {
         const deltaX = pointer.x - this.touchStartX;
         const deltaY = pointer.y - this.touchStartY;
         
-        // Если свайп достаточно длинный по горизонтали
         if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
           if (deltaX > 0) {
-            this.changeLane(1); // Вправо
+            this.changeLane(1);
           } else {
-            this.changeLane(-1); // Влево
+            this.changeLane(-1);
           }
           this.isTouching = false;
         }
@@ -150,7 +610,6 @@ class MainScene extends Phaser.Scene {
       this.add.rectangle(gameWidth - shoulderWidth - 20, y, 2, 20, 0xFFFFFF);
     }
     
-    // Обновляем ширину полос для игровой логики
     this.laneWidth = laneWidth;
     this.roadStart = roadStart;
   }
@@ -166,11 +625,8 @@ class MainScene extends Phaser.Scene {
       const x = side === 0 ? shoulderWidth / 2 : gameWidth - shoulderWidth / 2;
       const y = (i / 2) * (gameHeight / 6) + 50;
       
-      // Ствол дерева
       this.add.rectangle(x, y, 15, 50, 0x8B4513);
-      // Крона дерева
       this.add.circle(x, y - 25, 30, 0x006400);
-      // Тень дерева
       this.add.ellipse(x + 10, y + 25, 40, 15, 0x000000, 0.3);
     }
     
@@ -182,9 +638,7 @@ class MainScene extends Phaser.Scene {
       const height = Phaser.Math.Between(80, 150);
       const width = Phaser.Math.Between(40, 80);
       
-      // Здание
       this.add.rectangle(x, y - height/2, width, height, 0x696969);
-      // Окна
       for (let j = 0; j < 3; j++) {
         for (let k = 0; k < Math.floor(height/30); k++) {
           if (Phaser.Math.Between(0, 100) < 60) {
@@ -198,12 +652,11 @@ class MainScene extends Phaser.Scene {
   createScoreEffect(x, y, text) {
     const scoreText = this.add.text(x, y, text, {
       font: 'bold 20px Arial',
-      fill: '#00ff00',
+      fill: text.includes('💎') ? '#00FFFF' : '#00ff00',
       stroke: '#000',
       strokeThickness: 2
     }).setOrigin(0.5);
     
-    // Анимация текста
     this.tweens.add({
       targets: scoreText,
       y: y - 50,
@@ -212,6 +665,10 @@ class MainScene extends Phaser.Scene {
       ease: 'Power2',
       onComplete: () => scoreText.destroy()
     });
+  }
+
+  updateDiamondsDisplay() {
+    this.diamondsText.setText(`💎 ${GameData.getDiamonds()}`);
   }
 
   update(time, delta) {
@@ -236,6 +693,8 @@ class MainScene extends Phaser.Scene {
           placedObstacles++;
         } else if (Phaser.Math.Between(0, 1000) < 120) {
           this.spawnObject('bonus', lane);
+        } else if (Phaser.Math.Between(0, 10000) < 5) { // Очень редко - 0.05% шанс
+          this.spawnObject('extrabonus', lane);
         }
       }
       this.lastObstacleSpawnTime = time;
@@ -243,8 +702,8 @@ class MainScene extends Phaser.Scene {
 
     this.obstacles.children.iterate(child => child.y += this.speed * delta / 1000);
     this.bonuses.children.iterate(child => child.y += this.speed * delta / 1000);
+    this.extraBonuses.children.iterate(child => child.y += this.speed * delta / 1000);
     
-    // Обновляем тень машинки
     this.playerShadow.x = this.player.x;
     this.playerShadow.y = this.player.y + 30;
   }
@@ -252,14 +711,28 @@ class MainScene extends Phaser.Scene {
   spawnObject(type, lane) {
     const x = this.roadStart + lane * this.laneWidth + this.laneWidth / 2;
     const y = -60;
-    const group = (type === 'bonus') ? this.bonuses : this.obstacles;
-    const sprite = group.create(x, y, type);
-    sprite.setDisplaySize(this.sys.game.config.width * 0.14, this.sys.game.config.height * 0.07);
-    sprite.setImmovable(true);
     
-    // Добавляем тень для объектов
-    const shadow = this.add.ellipse(x, y + 25, this.sys.game.config.width * 0.12, this.sys.game.config.height * 0.02, 0x000000, 0.4);
-    sprite.shadow = shadow;
+    if (type === 'extrabonus') {
+      // Создаем алмаз
+      const diamond = this.extraBonuses.create(x, y, 'bonus');
+      diamond.setDisplaySize(this.sys.game.config.width * 0.1, this.sys.game.config.height * 0.05);
+      diamond.setTint(0x00FFFF); // Голубой цвет для алмазов
+      diamond.setImmovable(true);
+      
+      // Добавляем мерцание
+      this.tweens.add({
+        targets: diamond,
+        alpha: 0.3,
+        duration: 500,
+        yoyo: true,
+        repeat: -1
+      });
+    } else {
+      const group = (type === 'bonus') ? this.bonuses : this.obstacles;
+      const sprite = group.create(x, y, type);
+      sprite.setDisplaySize(this.sys.game.config.width * 0.14, this.sys.game.config.height * 0.07);
+      sprite.setImmovable(true);
+    }
   }
 
   changeLane(dir) {
@@ -272,28 +745,31 @@ class MainScene extends Phaser.Scene {
     if (this.gameOverFlag) return;
     this.gameOverFlag = true;
 
+    // Сохраняем счет
+    GameData.saveScore(this.score);
+
     this.physics.pause();
     this.player.setTint(0xff0000);
 
     // Экран окончания игры
-    const overlay = this.add.rectangle(this.sys.game.config.width / 2, this.sys.game.config.height / 2, 350, 200, 0x000000, 0.9);
+    const overlay = this.add.rectangle(this.sys.game.config.width / 2, this.sys.game.config.height / 2, 400, 300, 0x000000, 0.9);
     overlay.setStrokeStyle(3, 0xFFFFFF);
     
-    this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 - 50, 'ИГРА ОКОНЧЕНА', { 
+    this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 - 80, 'ИГРА ОКОНЧЕНА', { 
       font: 'bold 28px Arial', 
       fill: '#ff4444',
       stroke: '#000',
       strokeThickness: 2
     }).setOrigin(0.5);
     
-    this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 - 10, 'Итоговый счет: ' + Math.floor(this.score), { 
+    this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 - 40, 'Итоговый счет: ' + Math.floor(this.score), { 
       font: 'bold 20px Arial', 
       fill: '#fff',
       stroke: '#000',
       strokeThickness: 1
     }).setOrigin(0.5);
     
-    const restartButton = this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 + 40, 'НАЧАТЬ ЗАНОВО', { 
+    const restartButton = this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 + 10, 'НАЧАТЬ ЗАНОВО', { 
       font: 'bold 22px Arial', 
       fill: '#00ff00', 
       backgroundColor: '#000',
@@ -314,32 +790,50 @@ class MainScene extends Phaser.Scene {
         restartButton.setScale(1);
         restartButton.setFill('#00ff00');
       });
+
+    const menuButton = this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 + 60, 'МЕНЮ', { 
+      font: 'bold 22px Arial', 
+      fill: '#ffaa00', 
+      backgroundColor: '#000',
+      stroke: '#fff',
+      strokeThickness: 1
+    })
+      .setOrigin(0.5)
+      .setPadding(15, 10)
+      .setInteractive()
+      .on('pointerdown', () => {
+        this.scene.start('MenuScene');
+      })
+      .on('pointerover', () => {
+        menuButton.setScale(1.1);
+        menuButton.setFill('#ffcc44');
+      })
+      .on('pointerout', () => {
+        menuButton.setScale(1);
+        menuButton.setFill('#ffaa00');
+      });
   }
 
   handleSwipe(endX, endY) {
     const deltaX = endX - this.touchStartX;
     const deltaY = endY - this.touchStartY;
     
-    // Минимальное расстояние для свайпа
     const minSwipeDistance = 30;
     
     if (Math.abs(deltaX) > minSwipeDistance) {
-      // Определяем направление свайпа
       if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        // Горизонтальный свайп
         if (deltaX > 0) {
-          this.changeLane(1); // Вправо
+          this.changeLane(1);
         } else {
-          this.changeLane(-1); // Влево
+          this.changeLane(-1);
         }
       }
     } else {
-      // Если это был тап (а не свайп), определяем по половине экрана
       const screenWidth = this.sys.game.config.width;
       if (endX < screenWidth / 2) {
-        this.changeLane(-1); // Тап по левой половине - влево
+        this.changeLane(-1);
       } else {
-        this.changeLane(1); // Тап по правой половине - вправо
+        this.changeLane(1);
       }
     }
   }
@@ -350,7 +844,7 @@ const config = {
   width: window.innerWidth,
   height: window.innerHeight,
   physics: { default: 'arcade' },
-  scene: MainScene
+  scene: [MenuScene, ShopScene, PromotionsScene, LeaderboardScene, MainScene]
 };
 
 const game = new Phaser.Game(config);
