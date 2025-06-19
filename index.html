@@ -100,6 +100,9 @@ class MenuScene extends Phaser.Scene {
     // Фон
     this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x222222);
 
+    // Анимированные фоновые элементы
+    this.createAnimatedBackground();
+
     // Обновляем баланс при входе в меню и сбрасываем для тестирования
     this.events.on('wake', () => {
       this.updateDiamondsDisplay();
@@ -108,9 +111,16 @@ class MenuScene extends Phaser.Scene {
     // Принудительно сбрасываем баланс для решения проблем с кешем
     GameData.resetDiamonds();
 
-    // Заголовок
-    this.add.text(gameWidth / 2, gameHeight * 0.15, 'АВТОСЕРВИС КОРЕАНА', {
-      font: 'bold 36px Commissioner',
+    // Заголовок в две строки
+    this.add.text(gameWidth / 2, gameHeight * 0.12, 'АВТОСЕРВИС', {
+      font: 'bold 32px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+
+    this.add.text(gameWidth / 2, gameHeight * 0.17, 'КОРЕАНА', {
+      font: 'bold 32px Commissioner',
       fill: '#FFEE00',
       stroke: '#222222',
       strokeThickness: 2
@@ -159,9 +169,14 @@ class MenuScene extends Phaser.Scene {
     buttonBg.lineStyle(2, 0x222222);
     buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
 
+    // Невидимая область для клика (больше основной кнопки)
+    const clickArea = this.add.rectangle(x, y, 260, 70, 0x000000, 0);
+    clickArea.setInteractive();
+
     const button = this.add.text(x, y, text, style)
-      .setOrigin(0.5)
-      .setInteractive()
+      .setOrigin(0.5);
+
+    clickArea
       .on('pointerdown', callback)
       .on('pointerover', () => {
         buttonBg.clear();
@@ -180,6 +195,70 @@ class MenuScene extends Phaser.Scene {
         button.setFill('#222222');
       });
     return button;
+  }
+
+  createAnimatedBackground() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Создаем несколько движущихся геометрических фигур в корпоративном стиле
+    for (let i = 0; i < 6; i++) {
+      const shape = this.add.graphics();
+      const size = Phaser.Math.Between(20, 60);
+      const x = Phaser.Math.Between(0, gameWidth);
+      const y = Phaser.Math.Between(0, gameHeight);
+      
+      // Различные фигуры в корпоративных цветах
+      if (i % 3 === 0) {
+        // Жёлтые прямоугольники
+        shape.fillStyle(0xFFEE00, 0.1);
+        shape.fillRoundedRect(-size/2, -size/2, size, size, 8);
+      } else if (i % 3 === 1) {
+        // Серые круги
+        shape.fillStyle(0xC8C8C8, 0.08);
+        shape.fillCircle(0, 0, size/2);
+      } else {
+        // Жёлтые треугольники
+        shape.fillStyle(0xFFEE00, 0.06);
+        shape.fillTriangle(-size/2, size/2, 0, -size/2, size/2, size/2);
+      }
+      
+      shape.setPosition(x, y);
+      
+      // Медленная анимация движения
+      this.tweens.add({
+        targets: shape,
+        x: x + Phaser.Math.Between(-100, 100),
+        y: y + Phaser.Math.Between(-100, 100),
+        rotation: Math.PI * 2,
+        duration: Phaser.Math.Between(8000, 15000),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    }
+
+    // Добавляем пульсирующие линии в стиле автосервиса
+    for (let i = 0; i < 3; i++) {
+      const line = this.add.graphics();
+      line.lineStyle(2, 0xFFEE00, 0.3);
+      const startX = Phaser.Math.Between(0, gameWidth);
+      const startY = Phaser.Math.Between(0, gameHeight);
+      const endX = Phaser.Math.Between(0, gameWidth);
+      const endY = Phaser.Math.Between(0, gameHeight);
+      
+      line.lineBetween(startX, startY, endX, endY);
+      
+      // Анимация прозрачности
+      this.tweens.add({
+        targets: line,
+        alpha: 0.1,
+        duration: Phaser.Math.Between(3000, 6000),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    }
   }
 
   updateDiamondsDisplay() {
@@ -333,18 +412,19 @@ class ShopScene extends Phaser.Scene {
     // Описание
     this.add.text(x - gameWidth * 0.35, y + gameHeight * 0.012, item.description, {
       font: '12px Commissioner',
-      fill: '#C8C8C8'
+      fill: '#FFFFFF'
     }).setOrigin(0, 0.5);
 
-    // Цена
-    this.add.text(x + gameWidth * 0.15, y - gameHeight * 0.008, `💎 ${item.price}`, {
+    // Цена (смещена левее от кнопки)
+    this.add.text(x + gameWidth * 0.08, y - gameHeight * 0.008, `💎 ${item.price}`, {
       font: 'bold 14px Commissioner',
       fill: '#FFEE00',
       stroke: '#222222',
       strokeThickness: 1
     }).setOrigin(0.5, 0.5);
 
-    const buyButton = this.createShopButton(x + gameWidth * 0.25, y + gameHeight * 0.012, 'КУПИТЬ', () => {
+    // Кнопка купить (смещена дальше вправо)
+    const buyButton = this.createShopButton(x + gameWidth * 0.32, y + gameHeight * 0.012, 'КУПИТЬ', () => {
       this.buyItem(item);
     });
   }
@@ -370,8 +450,8 @@ class ShopScene extends Phaser.Scene {
     // Затемнение
     const overlay = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x000000, 0.7);
 
-    // Окно предупреждения
-    const warningBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth * 0.85, gameHeight * 0.5, 0x333333);
+    // Окно предупреждения (увеличено по высоте для двух рядов кнопок)
+    const warningBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth * 0.85, gameHeight * 0.6, 0x333333);
     warningBox.setStrokeStyle(3, 0xFFFF00);
 
     const titleText = this.add.text(gameWidth / 2, gameHeight / 2 - gameHeight * 0.2, 'ВНИМАНИЕ!', {
@@ -390,7 +470,7 @@ class ShopScene extends Phaser.Scene {
       align: 'center'
     }).setOrigin(0.5);
 
-    const continueButton = this.createButton(gameWidth / 2 - gameWidth * 0.12, gameHeight / 2 + gameHeight * 0.12, 'ПРОДОЛЖИТЬ', {
+    const continueButton = this.createButton(gameWidth / 2, gameHeight / 2 + gameHeight * 0.08, 'ПРОДОЛЖИТЬ', {
       font: 'bold 16px Arial',
       fill: '#fff',
       backgroundColor: '#00aa00',
@@ -407,7 +487,7 @@ class ShopScene extends Phaser.Scene {
       }
     });
 
-    const cancelButton = this.createButton(gameWidth / 2 + gameWidth * 0.12, gameHeight / 2 + gameHeight * 0.12, 'ОТМЕНА', {
+    const cancelButton = this.createButton(gameWidth / 2, gameHeight / 2 + gameHeight * 0.16, 'ОТМЕНА', {
       font: 'bold 16px Arial',
       fill: '#fff',
       backgroundColor: '#aa0000',
@@ -434,8 +514,8 @@ class ShopScene extends Phaser.Scene {
     // Затемнение
     const overlay = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x000000, 0.7);
 
-    // Окно подтверждения
-    const confirmBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, 400, 250, 0x333333);
+    // Окно подтверждения (увеличено по высоте для двух рядов кнопок)
+    const confirmBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, 400, 320, 0x333333);
     confirmBox.setStrokeStyle(3, 0xFFFFFF);
 
     const titleText = this.add.text(gameWidth / 2, gameHeight / 2 - 60, 'ПОКУПКА СОВЕРШЕНА!', {
@@ -455,7 +535,7 @@ class ShopScene extends Phaser.Scene {
       fill: '#ccc'
     }).setOrigin(0.5);
 
-    const yesButton = this.createButton(gameWidth / 2 - 80, gameHeight / 2 + 60, 'ДА', {
+    const yesButton = this.createButton(gameWidth / 2, gameHeight / 2 + 40, 'ДА', {
       font: 'bold 20px Arial',
       fill: '#fff',
       backgroundColor: '#00aa00',
@@ -466,7 +546,7 @@ class ShopScene extends Phaser.Scene {
       this.destroyConfirmDialog(overlay, confirmBox, titleText, itemText, questionText, yesButton, noButton);
     });
 
-    const noButton = this.createButton(gameWidth / 2 + 80, gameHeight / 2 + 60, 'НЕТ', {
+    const noButton = this.createButton(gameWidth / 2, gameHeight / 2 + 100, 'НЕТ', {
       font: 'bold 20px Arial',
       fill: '#fff',
       backgroundColor: '#aa0000',
