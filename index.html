@@ -77,6 +77,11 @@ class GameData {
     }
     return false;
   }
+  
+  static resetDiamonds() {
+    // Принудительно устанавливаем тестовый баланс (для решения проблем с кешем)
+    this.save('diamonds', 1000);
+  }
 }
 
 // Главное меню
@@ -92,27 +97,30 @@ class MenuScene extends Phaser.Scene {
     // Фон
     this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x1a1a2e);
 
-    // Обновляем баланс при входе в меню
+    // Обновляем баланс при входе в меню и сбрасываем для тестирования
     this.events.on('wake', () => {
       this.updateDiamondsDisplay();
     });
+    
+    // Принудительно сбрасываем баланс для решения проблем с кешем
+    GameData.resetDiamonds();
 
     // Заголовок
-    this.add.text(gameWidth / 2, gameHeight * 0.2, 'АВТОГОНКИ', {
-      font: 'bold 48px Arial',
+    this.add.text(gameWidth / 2, gameHeight * 0.15, 'АВТОГОНКИ', {
+      font: 'bold 42px Arial',
       fill: '#FFD700',
       stroke: '#000',
       strokeThickness: 4
     }).setOrigin(0.5);
 
-    // Баланс алмазов
+    // Баланс алмазов (центрировано под заголовком)
     const diamonds = GameData.getDiamonds();
-    this.diamondsText = this.add.text(gameWidth - 20, 20, `💎 ${diamonds}`, {
-      font: 'bold 24px Arial',
+    this.diamondsText = this.add.text(gameWidth / 2, gameHeight * 0.25, `💎 ${diamonds}`, {
+      font: 'bold 28px Arial',
       fill: '#00FFFF',
       stroke: '#000',
       strokeThickness: 2
-    }).setOrigin(1, 0);
+    }).setOrigin(0.5);
 
     // Кнопки меню
     const buttonStyle = {
@@ -127,16 +135,30 @@ class MenuScene extends Phaser.Scene {
       this.scene.start('MainScene');
     });
 
-    const shopButton = this.createButton(gameWidth / 2, gameHeight * 0.52, 'МАГАЗИН', buttonStyle, () => {
+    const shopButton = this.createButton(gameWidth / 2, gameHeight * 0.5, 'МАГАЗИН', buttonStyle, () => {
       this.scene.start('ShopScene');
     });
 
-    const promoButton = this.createButton(gameWidth / 2, gameHeight * 0.64, 'АКЦИИ', buttonStyle, () => {
+    const promoButton = this.createButton(gameWidth / 2, gameHeight * 0.6, 'АКЦИИ', buttonStyle, () => {
       this.scene.start('PromotionsScene');
     });
 
-    const leaderButton = this.createButton(gameWidth / 2, gameHeight * 0.76, 'ТАБЛИЦА ЛИДЕРОВ', buttonStyle, () => {
+    const leaderButton = this.createButton(gameWidth / 2, gameHeight * 0.7, 'ТАБЛИЦА ЛИДЕРОВ', buttonStyle, () => {
       this.scene.start('LeaderboardScene');
+    });
+
+    // Тестовая кнопка сброса (убрать после тестирования)
+    const resetButton = this.createButton(gameWidth / 2, gameHeight * 0.85, 'СБРОС КЕША (тест)', {
+      font: 'bold 18px Arial',
+      fill: '#fff',
+      backgroundColor: '#ff6600',
+      stroke: '#000',
+      strokeThickness: 2
+    }, () => {
+      localStorage.clear();
+      GameData.resetDiamonds();
+      this.updateDiamondsDisplay();
+      alert('Кеш очищен! Баланс сброшен на 1000 💎');
     });
   }
 
@@ -177,7 +199,7 @@ class ShopScene extends Phaser.Scene {
     this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x2a2a2a);
 
     // Заголовок
-    this.add.text(gameWidth / 2, 60, 'МАГАЗИН', {
+    this.add.text(gameWidth / 2, gameHeight * 0.08, 'МАГАЗИН', {
       font: 'bold 36px Arial',
       fill: '#FFD700',
       stroke: '#000',
@@ -186,8 +208,8 @@ class ShopScene extends Phaser.Scene {
 
     // Баланс
     const diamonds = GameData.getDiamonds();
-    this.diamondsText = this.add.text(gameWidth / 2, 110, `Баланс: 💎 ${diamonds}`, {
-      font: 'bold 24px Arial',
+    this.diamondsText = this.add.text(gameWidth / 2, gameHeight * 0.15, `Баланс: 💎 ${diamonds}`, {
+      font: 'bold 26px Arial',
       fill: '#00FFFF',
       stroke: '#000',
       strokeThickness: 2
@@ -202,12 +224,12 @@ class ShopScene extends Phaser.Scene {
     ];
 
     items.forEach((item, index) => {
-      const y = 200 + index * 120;
+      const y = gameHeight * 0.25 + index * (gameHeight * 0.12);
       this.createShopItem(gameWidth / 2, y, item);
     });
 
     // Кнопка назад
-    this.createButton(100, gameHeight - 60, 'НАЗАД', {
+    this.createButton(gameWidth * 0.15, gameHeight * 0.9, 'НАЗАД', {
       font: 'bold 24px Arial',
       fill: '#fff',
       backgroundColor: '#666',
@@ -220,35 +242,36 @@ class ShopScene extends Phaser.Scene {
 
   createShopItem(x, y, item) {
     const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
     
     // Фон товара
-    const itemBg = this.add.rectangle(x, y, gameWidth * 0.9, 100, 0x444444, 0.8);
+    const itemBg = this.add.rectangle(x, y, gameWidth * 0.9, gameHeight * 0.08, 0x444444, 0.8);
     itemBg.setStrokeStyle(2, 0xFFFFFF);
 
     // Название товара
-    this.add.text(x - gameWidth * 0.4, y - 20, item.name, {
-      font: 'bold 22px Arial',
+    this.add.text(x - gameWidth * 0.35, y - gameHeight * 0.015, item.name, {
+      font: 'bold 20px Arial',
       fill: '#FFD700',
       stroke: '#000',
       strokeThickness: 2
     }).setOrigin(0, 0.5);
 
     // Описание
-    this.add.text(x - gameWidth * 0.4, y + 10, item.description, {
-      font: '16px Arial',
+    this.add.text(x - gameWidth * 0.35, y + gameHeight * 0.015, item.description, {
+      font: '14px Arial',
       fill: '#ccc'
     }).setOrigin(0, 0.5);
 
     // Цена
-    this.add.text(x + gameWidth * 0.15, y - 10, `💎 ${item.price}`, {
-      font: 'bold 20px Arial',
+    this.add.text(x + gameWidth * 0.15, y - gameHeight * 0.01, `💎 ${item.price}`, {
+      font: 'bold 18px Arial',
       fill: '#00FFFF',
       stroke: '#000',
       strokeThickness: 1
     }).setOrigin(0.5, 0.5);
 
-    const buyButton = this.createButton(x + gameWidth * 0.25, y + 20, 'КУПИТЬ', {
-      font: 'bold 18px Arial',
+    const buyButton = this.createButton(x + gameWidth * 0.25, y + gameHeight * 0.015, 'КУПИТЬ', {
+      font: 'bold 16px Arial',
       fill: '#fff',
       backgroundColor: '#00aa00',
       stroke: '#000',
@@ -259,12 +282,81 @@ class ShopScene extends Phaser.Scene {
   }
 
   buyItem(item) {
-    if (GameData.spendDiamonds(item.price)) {
-      this.showPurchaseConfirmation(item);
-      this.updateDiamondsDisplay();
+    // Проверяем, является ли товар скидкой
+    if (item.name.includes('Скидка')) {
+      this.showDiscountWarning(item);
     } else {
-      this.showMessage('Недостаточно алмазов!');
+      if (GameData.spendDiamonds(item.price)) {
+        this.showPurchaseConfirmation(item);
+        this.updateDiamondsDisplay();
+      } else {
+        this.showMessage('Недостаточно алмазов!');
+      }
     }
+  }
+
+  showDiscountWarning(item) {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Затемнение
+    const overlay = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x000000, 0.7);
+
+    // Окно предупреждения
+    const warningBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth * 0.9, gameHeight * 0.6, 0x333333);
+    warningBox.setStrokeStyle(3, 0xFFFF00);
+
+    const titleText = this.add.text(gameWidth / 2, gameHeight / 2 - gameHeight * 0.22, 'ВНИМАНИЕ!', {
+      font: 'bold 28px Arial',
+      fill: '#FFFF00',
+      stroke: '#000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+
+    const warningText = this.add.text(gameWidth / 2, gameHeight / 2 - gameHeight * 0.12, 
+      'После покупки вы направляетесь\nна уникальную форму записи.\n\nТОЛЬКО ПО НЕЙ ВЫ СМОЖЕТЕ\nПОЛУЧИТЬ СКИДКУ!', {
+      font: 'bold 18px Arial',
+      fill: '#fff',
+      stroke: '#000',
+      strokeThickness: 1,
+      align: 'center'
+    }).setOrigin(0.5);
+
+    const continueButton = this.createButton(gameWidth / 2 - gameWidth * 0.15, gameHeight / 2 + gameHeight * 0.15, 'ПРОДОЛЖИТЬ', {
+      font: 'bold 18px Arial',
+      fill: '#fff',
+      backgroundColor: '#00aa00',
+      stroke: '#000',
+      strokeThickness: 2
+    }, () => {
+      if (GameData.spendDiamonds(item.price)) {
+        this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
+        this.showPurchaseConfirmation(item);
+        this.updateDiamondsDisplay();
+      } else {
+        this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
+        this.showMessage('Недостаточно алмазов!');
+      }
+    });
+
+    const cancelButton = this.createButton(gameWidth / 2 + gameWidth * 0.15, gameHeight / 2 + gameHeight * 0.15, 'ОТМЕНА', {
+      font: 'bold 18px Arial',
+      fill: '#fff',
+      backgroundColor: '#aa0000',
+      stroke: '#000',
+      strokeThickness: 2
+    }, () => {
+      this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
+    });
+  }
+
+  destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton) {
+    overlay.destroy();
+    warningBox.destroy();
+    titleText.destroy();
+    warningText.destroy();
+    continueButton.destroy();
+    cancelButton.destroy();
   }
 
   showPurchaseConfirmation(item) {
@@ -383,7 +475,7 @@ class PromotionsScene extends Phaser.Scene {
     this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x1a4a1a);
 
     // Заголовок
-    this.add.text(gameWidth / 2, 60, 'АКЦИИ', {
+    this.add.text(gameWidth / 2, gameHeight * 0.08, 'АКЦИИ', {
       font: 'bold 36px Arial',
       fill: '#FFD700',
       stroke: '#000',
@@ -391,23 +483,23 @@ class PromotionsScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Ежедневная реклама
-    this.createDailyReward(gameWidth / 2, 150);
+    this.createDailyReward(gameWidth / 2, gameHeight * 0.2);
     
     // Двойные алмазы в выходные
-    this.createPromotion(gameWidth / 2, 230, 'Двойные алмазы в выходные!', null);
+    this.createPromotion(gameWidth / 2, gameHeight * 0.35, 'Двойные алмазы в выходные!', null);
     
     // Специальное предложение недели
-    this.createPromotion(gameWidth / 2, 310, 'Специальное предложение недели', () => {
+    this.createPromotion(gameWidth / 2, gameHeight * 0.5, 'Специальное предложение недели', () => {
       this.openLink('https://koreanaparts.ru/specpredlozheniya-i-akcii-kompanii-koreana-sankt-peterburg');
     });
     
     // Мем за алмаз
-    this.createPromotion(gameWidth / 2, 390, 'Мем за алмаз', () => {
+    this.createPromotion(gameWidth / 2, gameHeight * 0.65, 'Мем за алмаз', () => {
       this.openLink('https://www.anekdot.ru/last/mem/');
     });
 
     // Кнопка назад
-    this.createButton(100, gameHeight - 60, 'НАЗАД', {
+    this.createButton(gameWidth * 0.15, gameHeight * 0.9, 'НАЗАД', {
       font: 'bold 24px Arial',
       fill: '#fff',
       backgroundColor: '#666',
@@ -532,8 +624,8 @@ class LeaderboardScene extends Phaser.Scene {
     this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x4a1a4a);
 
     // Заголовок
-    this.add.text(gameWidth / 2, 60, 'ТАБЛИЦА ЛИДЕРОВ', {
-      font: 'bold 36px Arial',
+    this.add.text(gameWidth / 2, gameHeight * 0.08, 'ТАБЛИЦА ЛИДЕРОВ', {
+      font: 'bold 32px Arial',
       fill: '#FFD700',
       stroke: '#000',
       strokeThickness: 3
@@ -543,17 +635,17 @@ class LeaderboardScene extends Phaser.Scene {
     const scores = GameData.getTopScores();
 
     if (scores.length === 0) {
-      this.add.text(gameWidth / 2, gameHeight / 2, 'Пока нет рекордов', {
+      this.add.text(gameWidth / 2, gameHeight * 0.4, 'Пока нет рекордов', {
         font: 'bold 24px Arial',
         fill: '#ccc'
       }).setOrigin(0.5);
     } else {
       scores.forEach((score, index) => {
-        const y = 150 + index * 40;
+        const y = gameHeight * 0.25 + index * (gameHeight * 0.05);
         const medal = index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}.`;
         
         this.add.text(gameWidth / 2, y, `${medal} ${score} очков`, {
-          font: 'bold 22px Arial',
+          font: 'bold 20px Arial',
           fill: '#fff',
           stroke: '#000',
           strokeThickness: 1
@@ -562,7 +654,7 @@ class LeaderboardScene extends Phaser.Scene {
     }
 
     // Кнопка назад
-    this.createButton(100, gameHeight - 60, 'НАЗАД', {
+    this.createButton(gameWidth * 0.15, gameHeight * 0.9, 'НАЗАД', {
       font: 'bold 24px Arial',
       fill: '#fff',
       backgroundColor: '#666',
