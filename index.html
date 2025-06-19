@@ -1242,66 +1242,84 @@ class MainScene extends Phaser.Scene {
     this.player.setTint(0xff0000);
 
     // Экран окончания игры
-    const overlay = this.add.rectangle(this.sys.game.config.width / 2, this.sys.game.config.height / 2, 400, 300, 0x000000, 0.9);
-    overlay.setStrokeStyle(3, 0xFFFFFF);
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
     
-    this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 - 80, 'ИГРА ОКОНЧЕНА', { 
-      font: 'bold 28px Arial', 
-      fill: '#ff4444',
-      stroke: '#000',
+    // Затемнение фона
+    const overlay = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x000000, 0.8);
+    
+    // Основное окно диалога
+    const dialogBg = this.add.graphics();
+    dialogBg.fillStyle(0x222222, 0.95);
+    dialogBg.fillRoundedRect(gameWidth / 2 - 200, gameHeight / 2 - 150, 400, 300, 15);
+    dialogBg.lineStyle(3, 0xFFEE00);
+    dialogBg.strokeRoundedRect(gameWidth / 2 - 200, gameHeight / 2 - 150, 400, 300, 15);
+    
+    // Заголовок
+    this.add.text(gameWidth / 2, gameHeight / 2 - 80, 'ИГРА ОКОНЧЕНА', { 
+      font: 'bold 28px Commissioner', 
+      fill: '#FFEE00',
+      stroke: '#222222',
       strokeThickness: 2
     }).setOrigin(0.5);
     
-    this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 - 40, 'Итоговый счет: ' + Math.floor(this.score), { 
-      font: 'bold 20px Arial', 
-      fill: '#fff',
-      stroke: '#000',
+    // Счет
+    this.add.text(gameWidth / 2, gameHeight / 2 - 40, 'Итоговый счет: ' + Math.floor(this.score), { 
+      font: 'bold 20px Commissioner', 
+      fill: '#C8C8C8',
+      stroke: '#222222',
       strokeThickness: 1
     }).setOrigin(0.5);
     
-    const restartButton = this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 + 10, 'НАЧАТЬ ЗАНОВО', { 
-      font: 'bold 22px Arial', 
-      fill: '#00ff00', 
-      backgroundColor: '#000',
-      stroke: '#fff',
-      strokeThickness: 1
-    })
-      .setOrigin(0.5)
-      .setPadding(15, 10)
-      .setInteractive()
-      .on('pointerdown', () => {
-        this.scene.restart();
-      })
-      .on('pointerover', () => {
-        restartButton.setScale(1.1);
-        restartButton.setFill('#44ff44');
-      })
-      .on('pointerout', () => {
-        restartButton.setScale(1);
-        restartButton.setFill('#00ff00');
-      });
+    // Кнопка "Начать заново"
+    this.createGameOverButton(gameWidth / 2, gameHeight / 2 + 10, 'НАЧАТЬ ЗАНОВО', () => {
+      this.scene.restart();
+    });
 
-    const menuButton = this.add.text(this.sys.game.config.width / 2, this.sys.game.config.height / 2 + 60, 'МЕНЮ', { 
-      font: 'bold 22px Arial', 
-      fill: '#ffaa00', 
-      backgroundColor: '#000',
-      stroke: '#fff',
-      strokeThickness: 1
-    })
-      .setOrigin(0.5)
-      .setPadding(15, 10)
-      .setInteractive()
-      .on('pointerdown', () => {
-        this.scene.start('MenuScene');
-      })
+    // Кнопка "Меню"
+    this.createGameOverButton(gameWidth / 2, gameHeight / 2 + 70, 'МЕНЮ', () => {
+      this.scene.start('MenuScene');
+    });
+  }
+
+  createGameOverButton(x, y, text, callback) {
+    // Создаем фон кнопки со скруглениями в корпоративном стиле
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0xFFEE00);
+    buttonBg.fillRoundedRect(x - 120, y - 25, 240, 50, 15);
+    buttonBg.lineStyle(3, 0x222222);
+    buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
+
+    // Невидимая область для клика (больше основной кнопки)
+    const clickArea = this.add.rectangle(x, y, 260, 70, 0x000000, 0);
+    clickArea.setInteractive();
+
+    const button = this.add.text(x, y, text, {
+      font: 'bold 20px Commissioner',
+      fill: '#222222'
+    }).setOrigin(0.5);
+
+    clickArea
+      .on('pointerdown', callback)
       .on('pointerover', () => {
-        menuButton.setScale(1.1);
-        menuButton.setFill('#ffcc44');
+        buttonBg.clear();
+        buttonBg.fillStyle(0x222222);
+        buttonBg.fillRoundedRect(x - 120, y - 25, 240, 50, 15);
+        buttonBg.lineStyle(3, 0xFFEE00);
+        buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
+        button.setFill('#FFEE00');
+        button.setScale(1.05);
       })
       .on('pointerout', () => {
-        menuButton.setScale(1);
-        menuButton.setFill('#ffaa00');
+        buttonBg.clear();
+        buttonBg.fillStyle(0xFFEE00);
+        buttonBg.fillRoundedRect(x - 120, y - 25, 240, 50, 15);
+        buttonBg.lineStyle(3, 0x222222);
+        buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
+        button.setFill('#222222');
+        button.setScale(1);
       });
+    return button;
   }
 
   handleSwipe(endX, endY) {
