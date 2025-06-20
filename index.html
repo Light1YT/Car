@@ -24,6 +24,117 @@
 <body>
 
 <script>
+// Глобальная система управления звуком
+class SoundManager {
+  static isMuted = false;
+  static musicVolume = 1.0;
+  static effectsVolume = 1.0;
+  static currentSounds = {}; // Отслеживание текущих звуков
+  
+  static init() {
+    this.isMuted = GameData.load('soundMuted', false);
+    this.musicVolume = GameData.load('musicVolume', 1.0);
+    this.effectsVolume = GameData.load('effectsVolume', 1.0);
+  }
+  
+  static toggleMute() {
+    this.isMuted = !this.isMuted;
+    GameData.save('soundMuted', this.isMuted);
+  }
+  
+  static setMusicVolume(volume) {
+    this.musicVolume = Math.max(0, Math.min(1, volume));
+    GameData.save('musicVolume', this.musicVolume);
+  }
+  
+  static setEffectsVolume(volume) {
+    this.effectsVolume = Math.max(0, Math.min(1, volume));
+    GameData.save('effectsVolume', this.effectsVolume);
+  }
+  
+  static getMuteState() {
+    this.init();
+    return this.isMuted;
+  }
+  
+  static playSound(scene, soundKey, baseVolume = 1) {
+    if (!this.isMuted && scene.sound) {
+      // Для звука benz не воспроизводим, если уже играет
+      if (soundKey === 'benz' && this.currentSounds[soundKey] && this.currentSounds[soundKey].isPlaying) {
+        return null; // Не воспроизводим новый звук
+      }
+      
+      // Для других звуков останавливаем предыдущий звук того же типа если он играет
+      if (soundKey !== 'benz' && this.currentSounds[soundKey] && this.currentSounds[soundKey].isPlaying) {
+        this.currentSounds[soundKey].stop();
+      }
+      
+      const finalVolume = baseVolume * this.effectsVolume;
+      const sound = scene.sound.add(soundKey, { volume: finalVolume });
+      
+      // Сохраняем ссылку на звук
+      this.currentSounds[soundKey] = sound;
+      
+      // Удаляем ссылку когда звук закончится
+      sound.once('complete', () => {
+        delete this.currentSounds[soundKey];
+      });
+      
+      sound.play();
+      return sound;
+    }
+    return null;
+  }
+  
+  static playMusic(scene, musicKey, baseVolume = 1, loop = true) {
+    if (!this.isMuted && scene.sound) {
+      // Проверяем, не играет ли уже эта же музыка
+      if (scene.currentMusic && scene.currentMusic.key === musicKey && scene.currentMusic.isPlaying) {
+        // Обновляем громкость существующей музыки
+        scene.currentMusic.setVolume(baseVolume * this.musicVolume);
+        return scene.currentMusic;
+      }
+      
+      // Останавливаем любую предыдущую музыку
+      if (scene.currentMusic) {
+        scene.currentMusic.stop();
+      }
+      
+      // Запускаем новую музыку
+      const finalVolume = baseVolume * this.musicVolume;
+      scene.currentMusic = scene.sound.add(musicKey, { volume: finalVolume, loop: loop });
+      scene.currentMusic.play();
+      return scene.currentMusic;
+    }
+    return null;
+  }
+  
+  static stopMusic(scene) {
+    if (scene.currentMusic) {
+      scene.currentMusic.stop();
+      scene.currentMusic = null;
+    }
+  }
+  
+  static updateMuteState(scene) {
+    if (this.isMuted) {
+      if (scene.currentMusic) {
+        scene.currentMusic.pause();
+      }
+    } else {
+      if (scene.currentMusic && scene.currentMusic.isPaused) {
+        scene.currentMusic.resume();
+      }
+    }
+  }
+  
+  static updateMusicVolume(scene, baseVolume = 1) {
+    if (scene.currentMusic && scene.currentMusic.isPlaying) {
+      scene.currentMusic.setVolume(baseVolume * this.musicVolume);
+    }
+  }
+}
+
 // Система сохранения данных
 class GameData {
   static save(key, value) {
@@ -93,182 +204,174 @@ class MenuScene extends Phaser.Scene {
     super('MenuScene');
   }
 
+  preload() {
+    // Загружаем фон меню и персонажей
+    this.load.image('bgMenu', 'bgMenu.png');
+    this.load.image('man1', 'man1.png');
+    this.load.image('man2', 'man2.png');
+    
+    // Загружаем спрайты монет для отображения в меню
+    this.load.image('coin1', 'coin1.png');
+    this.load.image('coin2', 'coin2.png');
+    
+    // Загружаем новые элементы интерфейса
+    this.load.image('logo', 'logo.png');
+    this.load.image('gameR', 'gameR.png');
+    this.load.image('game', 'game.png');
+    this.load.image('shopR', 'shopR.png');
+    this.load.image('shop', 'shop.png');
+    this.load.image('actionR', 'actionR.png');
+    this.load.image('action', 'action.png');
+    this.load.image('leaderboardR', 'leaderboardR.png');
+    this.load.image('leaderboard', 'leaderboard.png');
+    
+    // Загружаем звуки
+    this.load.audio('MM', 'MM.mp3');
+    this.load.audio('GM', 'GM.mp3');
+    this.load.audio('smash', 'smash.mp3');
+    this.load.audio('coin', 'coin.mp3');
+    this.load.audio('benz', 'benz.mp3');
+  }
+
   create() {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
 
-    // Фон
-    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x222222);
+    // Фон меню с эффектом блюра
+    const bgMenu = this.add.image(gameWidth / 2, gameHeight / 2, 'bgMenu');
+    bgMenu.setDisplaySize(gameWidth, gameHeight);
+    bgMenu.setAlpha(0.85); // Делаем немного прозрачным для мягкого эффекта
 
-    // Анимированные фоновые элементы
-    this.createAnimatedBackground();
-
-    // Обновляем баланс при входе в меню и сбрасываем для тестирования
-    this.events.on('wake', () => {
-      this.updateDiamondsDisplay();
-    });
-    
     // Принудительно сбрасываем баланс для решения проблем с кешем
     GameData.resetDiamonds();
 
-    // Заголовок в две строки
-    this.add.text(gameWidth / 2, gameHeight * 0.12, 'АВТОСЕРВИС', {
-      font: 'bold 32px Commissioner',
-      fill: '#FFEE00',
-      stroke: '#222222',
-      strokeThickness: 2
-    }).setOrigin(0.5);
+    // Инициализируем состояние звука
+    SoundManager.getMuteState();
+    
+    // Запускаем фоновую музыку меню
+    SoundManager.playMusic(this, 'MM', 0.008);
+    
+    // Кнопка управления звуком в правом верхнем углу
+    this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
 
-    this.add.text(gameWidth / 2, gameHeight * 0.17, 'КОРЕАНА', {
-      font: 'bold 32px Commissioner',
-      fill: '#FFEE00',
-      stroke: '#222222',
-      strokeThickness: 2
-    }).setOrigin(0.5);
+    // Логотип компании
+    const logo = this.add.image(gameWidth / 2, gameHeight * 0.15, 'logo');
+    logo.setDisplaySize(gameWidth * 0.6, gameHeight * 0.12);
 
-    // Баланс алмазов (центрировано под заголовком)
-    const diamonds = GameData.getDiamonds();
-    this.diamondsText = this.add.text(gameWidth / 2, gameHeight * 0.25, `💎 ${diamonds}`, {
-      font: 'bold 24px Commissioner',
-      fill: '#FFEE00',
-      stroke: '#222222',
-      strokeThickness: 1
-    }).setOrigin(0.5);
-
-    // Кнопки меню
-    const buttonStyle = {
-      font: 'bold 20px Commissioner',
-      fill: '#222222',
-      backgroundColor: '#FFEE00',
-      stroke: '#222222',
-      strokeThickness: 1
-    };
-
-    const playButton = this.createButton(gameWidth / 2, gameHeight * 0.38, 'ИГРАТЬ', buttonStyle, () => {
+    // Новые кнопки меню со спрайтами (скорректирован размер текста)
+    // Кнопка "Играть"
+    const gameButtonBg = this.add.image(gameWidth * 0.25, gameHeight * 0.42, 'gameR');
+    gameButtonBg.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    gameButtonBg.setInteractive();
+    const gameButtonText = this.add.image(gameWidth * 0.25, gameHeight * 0.42, 'game');
+    gameButtonText.setDisplaySize(gameWidth * 0.25, gameHeight * 0.04);
+    
+    gameButtonBg.on('pointerdown', () => {
       this.scene.start('MainScene');
     });
 
-    const shopButton = this.createButton(gameWidth / 2, gameHeight * 0.48, 'МАГАЗИН', buttonStyle, () => {
+    // Кнопка "Магазин"
+    const shopButtonBg = this.add.image(gameWidth * 0.25, gameHeight * 0.54, 'shopR');
+    shopButtonBg.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    shopButtonBg.setInteractive();
+    const shopButtonText = this.add.image(gameWidth * 0.25, gameHeight * 0.54, 'shop');
+    shopButtonText.setDisplaySize(gameWidth * 0.25, gameHeight * 0.04);
+    
+    shopButtonBg.on('pointerdown', () => {
       this.scene.start('ShopScene');
     });
 
-    const promoButton = this.createButton(gameWidth / 2, gameHeight * 0.58, 'АКЦИИ', buttonStyle, () => {
+    // Кнопка "Акции"
+    const actionButtonBg = this.add.image(gameWidth * 0.25, gameHeight * 0.66, 'actionR');
+    actionButtonBg.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    actionButtonBg.setInteractive();
+    const actionButtonText = this.add.image(gameWidth * 0.25, gameHeight * 0.66, 'action');
+    actionButtonText.setDisplaySize(gameWidth * 0.25, gameHeight * 0.04);
+    
+    actionButtonBg.on('pointerdown', () => {
       this.scene.start('PromotionsScene');
     });
 
-    const leaderButton = this.createButton(gameWidth / 2, gameHeight * 0.68, 'ТАБЛИЦА ЛИДЕРОВ', buttonStyle, () => {
+    // Кнопка "Таблица лидеров"
+    const leaderButtonBg = this.add.image(gameWidth * 0.25, gameHeight * 0.78, 'leaderboardR');
+    leaderButtonBg.setDisplaySize(gameWidth * 0.4, gameHeight * 0.1);
+    leaderButtonBg.setInteractive();
+    const leaderButtonText = this.add.image(gameWidth * 0.25, gameHeight * 0.78, 'leaderboard');
+    leaderButtonText.setDisplaySize(gameWidth * 0.3, gameHeight * 0.06);
+    
+    leaderButtonBg.on('pointerdown', () => {
       this.scene.start('LeaderboardScene');
     });
+
+    // Добавляем персонажа в правую часть экрана (отзеркаленный, приподнятый)
+    const character = this.add.image(gameWidth * 0.75, gameHeight * 0.7, 'man1');
+    character.setDisplaySize(gameWidth * 0.45, gameHeight * 0.7);
+    character.setFlipX(true); // Отзеркаливаем горизонтально
+    
+    // Анимация персонажа (переключение между man1 и man2)
+    this.time.addEvent({
+      delay: 2000,
+      callback: () => {
+        if (character.texture.key === 'man1') {
+          character.setTexture('man2');
+        } else {
+          character.setTexture('man1');
+        }
+      },
+      repeat: -1
+    });
   }
-
-  createButton(x, y, text, style, callback) {
-    // Создаем фон кнопки со скруглениями
-    const buttonBg = this.add.graphics();
-    buttonBg.fillStyle(0xFFEE00);
-    buttonBg.fillRoundedRect(x - 120, y - 25, 240, 50, 15);
-    buttonBg.lineStyle(2, 0x222222);
-    buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
-
-    // Невидимая область для клика (больше основной кнопки)
-    const clickArea = this.add.rectangle(x, y, 260, 70, 0x000000, 0);
-    clickArea.setInteractive();
-
-    const button = this.add.text(x, y, text, style)
-      .setOrigin(0.5);
-
-    clickArea
-      .on('pointerdown', callback)
-      .on('pointerover', () => {
-        buttonBg.clear();
-        buttonBg.fillStyle(0xC8C8C8);
-        buttonBg.fillRoundedRect(x - 120, y - 25, 240, 50, 15);
-        buttonBg.lineStyle(2, 0xFFEE00);
-        buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
-        button.setFill('#FFEE00');
-      })
-      .on('pointerout', () => {
-        buttonBg.clear();
-        buttonBg.fillStyle(0xFFEE00);
-        buttonBg.fillRoundedRect(x - 120, y - 25, 240, 50, 15);
-        buttonBg.lineStyle(2, 0x222222);
-        buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
-        button.setFill('#222222');
-      });
-    return button;
-  }
-
-  createAnimatedBackground() {
-    const gameWidth = this.sys.game.config.width;
-    const gameHeight = this.sys.game.config.height;
-
-    // Создаем несколько движущихся геометрических фигур в корпоративном стиле
-    for (let i = 0; i < 6; i++) {
-      const shape = this.add.graphics();
-      const size = Phaser.Math.Between(20, 60);
-      const x = Phaser.Math.Between(0, gameWidth);
-      const y = Phaser.Math.Between(0, gameHeight);
-      
-      // Различные фигуры в корпоративных цветах
-      if (i % 3 === 0) {
-        // Жёлтые прямоугольники
-        shape.fillStyle(0xFFEE00, 0.1);
-        shape.fillRoundedRect(-size/2, -size/2, size, size, 8);
-      } else if (i % 3 === 1) {
-        // Серые круги
-        shape.fillStyle(0xC8C8C8, 0.08);
-        shape.fillCircle(0, 0, size/2);
-      } else {
-        // Жёлтые треугольники
-        shape.fillStyle(0xFFEE00, 0.06);
-        shape.fillTriangle(-size/2, size/2, 0, -size/2, size/2, size/2);
-      }
-      
-      shape.setPosition(x, y);
-      
-      // Медленная анимация движения
-      this.tweens.add({
-        targets: shape,
-        x: x + Phaser.Math.Between(-100, 100),
-        y: y + Phaser.Math.Between(-100, 100),
-        rotation: Math.PI * 2,
-        duration: Phaser.Math.Between(8000, 15000),
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
-    }
-
-    // Добавляем пульсирующие линии в стиле автосервиса
-    for (let i = 0; i < 3; i++) {
-      const line = this.add.graphics();
-      line.lineStyle(2, 0xFFEE00, 0.3);
-      const startX = Phaser.Math.Between(0, gameWidth);
-      const startY = Phaser.Math.Between(0, gameHeight);
-      const endX = Phaser.Math.Between(0, gameWidth);
-      const endY = Phaser.Math.Between(0, gameHeight);
-      
-      line.lineBetween(startX, startY, endX, endY);
-      
-      // Анимация прозрачности
-      this.tweens.add({
-        targets: line,
-        alpha: 0.1,
-        duration: Phaser.Math.Between(3000, 6000),
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
-    }
-  }
-
-  updateDiamondsDisplay() {
-    const diamonds = GameData.getDiamonds();
-    this.diamondsText.setText(`💎 ${diamonds}`);
-    this.diamondsText.setStyle({
-      font: 'bold 24px Commissioner',
+  
+  createSoundButton(x, y) {
+    // Инициализируем состояние звука
+    SoundManager.getMuteState();
+    
+    // Создаем кнопку звука
+    const soundButton = this.add.text(x, y, SoundManager.isMuted ? '🔇' : '🔊', {
+      font: 'bold 32px Arial',
       fill: '#FFEE00',
       stroke: '#222222',
-      strokeThickness: 1
+      strokeThickness: 2
+    }).setOrigin(0.5).setInteractive();
+    
+    soundButton.on('pointerdown', () => {
+      // Простое переключение звука без сложных overlay
+      SoundManager.toggleMute();
+      soundButton.setText(SoundManager.isMuted ? '🔇' : '🔊');
+      SoundManager.updateMuteState(this);
+      
+      // Показываем уведомление
+      this.showSoundNotification(x, y - 60);
+    });
+    
+    soundButton.on('pointerover', () => {
+      soundButton.setScale(1.2);
+    });
+    
+    soundButton.on('pointerout', () => {
+      soundButton.setScale(1);
+    });
+  }
+  
+  showSoundNotification(x, y) {
+    // Создаем временное уведомление
+    const notification = this.add.text(x, y, SoundManager.isMuted ? 'ЗВУК ВЫКЛЮЧЕН' : 'ЗВУК ВКЛЮЧЁН', {
+      font: 'bold 16px Commissioner',
+      fill: SoundManager.isMuted ? '#FF4444' : '#44FF44',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // Анимация появления и исчезновения
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: y - 30,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
     });
   }
 }
@@ -279,12 +382,32 @@ class ShopScene extends Phaser.Scene {
     super('ShopScene');
   }
 
+  preload() {
+    // Загружаем фон меню для совместимости
+    this.load.image('bgMenu', 'bgMenu.png');
+    // Загружаем спрайты монет
+    this.load.image('coin1', 'coin1.png');
+    this.load.image('coin2', 'coin2.png');
+    
+    // Загружаем звуки
+    this.load.audio('MM', 'MM.mp3');
+    this.load.audio('coin', 'coin.mp3');
+  }
+
   create() {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
 
-    // Фон
-    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x222222);
+    // Фон магазина
+    const bgShop = this.add.image(gameWidth / 2, gameHeight / 2, 'bgMenu');
+    bgShop.setDisplaySize(gameWidth, gameHeight);
+    bgShop.setAlpha(0.7); // Делаем немного прозрачным для лучшей читаемости
+
+    // Запускаем фоновую музыку меню
+    SoundManager.playMusic(this, 'MM', 0.008);
+    
+    // Кнопка управления звуком в правом верхнем углу
+    this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
 
     // Заголовок
     this.add.text(gameWidth / 2, gameHeight * 0.08, 'МАГАЗИН ЗАПЧАСТЕЙ', {
@@ -296,12 +419,14 @@ class ShopScene extends Phaser.Scene {
 
     // Баланс
     const diamonds = GameData.getDiamonds();
-    this.diamondsText = this.add.text(gameWidth / 2, gameHeight * 0.15, `Баланс: 💎 ${diamonds}`, {
+    const balanceCoinIcon = this.add.image(gameWidth / 2 - 40, gameHeight * 0.15, 'coin1');
+    balanceCoinIcon.setDisplaySize(gameWidth * 0.09, gameHeight * 0.06);
+    this.diamondsText = this.add.text(gameWidth / 2 - 10, gameHeight * 0.15, `Баланс: ${diamonds}`, {
       font: 'bold 22px Commissioner',
       fill: '#FFEE00',
       stroke: '#222222',
       strokeThickness: 1
-    }).setOrigin(0.5);
+    }).setOrigin(0, 0.5);
 
     // Товары
     const items = [
@@ -415,13 +540,15 @@ class ShopScene extends Phaser.Scene {
       fill: '#FFFFFF'
     }).setOrigin(0, 0.5);
 
-    // Цена (смещена левее от кнопки)
-    this.add.text(x + gameWidth * 0.08, y - gameHeight * 0.008, `💎 ${item.price}`, {
-      font: 'bold 14px Commissioner',
+    // Цена с иконкой монеты
+    const priceCoinIcon = this.add.image(x + gameWidth * 0.05, y + gameHeight * 0.005 - 5 + 3, 'coin1');
+    priceCoinIcon.setDisplaySize(gameWidth * 0.08, gameHeight * 0.06);
+    this.add.text(x + gameWidth * 0.08, y - gameHeight * 0.008 + 2 + 5 - 3, `${item.price}`, {
+      font: 'bold 19px Commissioner',
       fill: '#FFEE00',
       stroke: '#222222',
       strokeThickness: 1
-    }).setOrigin(0.5, 0.5);
+    }).setOrigin(0, 0.5);
 
     // Кнопка купить (поднята на уровень центра элемента)
     const buyButton = this.createShopButton(x + gameWidth * 0.28, y, 'КУПИТЬ', () => {
@@ -435,10 +562,12 @@ class ShopScene extends Phaser.Scene {
       this.showDiscountWarning(item);
     } else {
       if (GameData.spendDiamonds(item.price)) {
+        // Воспроизводим звук покупки (монетка)
+        SoundManager.playSound(this, 'coin', 1.8);
         this.showPurchaseConfirmation(item);
         this.updateDiamondsDisplay();
       } else {
-        this.showMessage('Недостаточно алмазов!');
+        this.showMessage('Недостаточно монет!');
       }
     }
   }
@@ -483,7 +612,7 @@ class ShopScene extends Phaser.Scene {
         this.updateDiamondsDisplay();
       } else {
         this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
-        this.showMessage('Недостаточно алмазов!');
+        this.showMessage('Недостаточно монет!');
       }
     });
 
@@ -600,7 +729,7 @@ class ShopScene extends Phaser.Scene {
 
   updateDiamondsDisplay() {
     const diamonds = GameData.getDiamonds();
-    this.diamondsText.setText(`Баланс: 💎 ${diamonds}`);
+    this.diamondsText.setText(`Баланс: ${diamonds}`);
     this.diamondsText.setStyle({
       font: 'bold 22px Commissioner',
       fill: '#FFEE00',
@@ -623,6 +752,59 @@ class ShopScene extends Phaser.Scene {
       });
     return button;
   }
+
+  createSoundButton(x, y) {
+    // Инициализируем состояние звука
+    SoundManager.getMuteState();
+    
+    // Создаем кнопку звука
+    const soundButton = this.add.text(x, y, SoundManager.isMuted ? '🔇' : '🔊', {
+      font: 'bold 32px Arial',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5).setInteractive();
+    
+    soundButton.on('pointerdown', () => {
+      // Простое переключение звука без сложных overlay
+      SoundManager.toggleMute();
+      soundButton.setText(SoundManager.isMuted ? '🔇' : '🔊');
+      SoundManager.updateMuteState(this);
+      
+      // Показываем уведомление
+      this.showSoundNotification(x, y - 60);
+    });
+    
+    soundButton.on('pointerover', () => {
+      soundButton.setScale(1.2);
+    });
+    
+    soundButton.on('pointerout', () => {
+      soundButton.setScale(1);
+    });
+  }
+  
+  showSoundNotification(x, y) {
+    // Создаем временное уведомление
+    const notification = this.add.text(x, y, SoundManager.isMuted ? 'ЗВУК ВЫКЛЮЧЕН' : 'ЗВУК ВКЛЮЧЁН', {
+      font: 'bold 16px Commissioner',
+      fill: SoundManager.isMuted ? '#FF4444' : '#44FF44',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // Анимация появления и исчезновения
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: y - 30,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
+    });
+  }
 }
 
 // Акции
@@ -631,12 +813,29 @@ class PromotionsScene extends Phaser.Scene {
     super('PromotionsScene');
   }
 
+  preload() {
+    // Загружаем фон меню для совместимости
+    this.load.image('bgMenu', 'bgMenu.png');
+    
+    // Загружаем звуки
+    this.load.audio('MM', 'MM.mp3');
+    this.load.audio('coin', 'coin.mp3');
+  }
+
   create() {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
 
-    // Фон
-    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x222222);
+    // Фон акций
+    const bgPromo = this.add.image(gameWidth / 2, gameHeight / 2, 'bgMenu');
+    bgPromo.setDisplaySize(gameWidth, gameHeight);
+    bgPromo.setAlpha(0.6); // Делаем немного прозрачным для лучшей читаемости
+
+    // Запускаем фоновую музыку меню
+    SoundManager.playMusic(this, 'MM', 0.008);
+    
+    // Кнопка управления звуком в правом верхнем углу
+    this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
 
     // Заголовок в две строки
     this.add.text(gameWidth / 2, gameHeight * 0.05, 'АКЦИИ И', {
@@ -656,16 +855,16 @@ class PromotionsScene extends Phaser.Scene {
     // Ежедневная реклама
     this.createDailyReward(gameWidth / 2, gameHeight * 0.25);
     
-    // Двойные алмазы в выходные
-    this.createPromotion(gameWidth / 2, gameHeight * 0.38, 'Двойные алмазы в выходные!', null);
+    // Двойные монеты в выходные
+    this.createPromotion(gameWidth / 2, gameHeight * 0.38, 'Двойные монеты в выходные!', null);
     
     // Специальное предложение недели
     this.createPromotion(gameWidth / 2, gameHeight * 0.51, 'Специальное предложение недели', () => {
       this.openLink('https://koreanaparts.ru/specpredlozheniya-i-akcii-kompanii-koreana-sankt-peterburg');
     });
     
-    // Мем за алмаз
-    this.createPromotion(gameWidth / 2, gameHeight * 0.64, 'Мем за алмаз', () => {
+    // Мем за монету
+    this.createPromotion(gameWidth / 2, gameHeight * 0.64, 'Мем за монету', () => {
       this.openLink('https://www.anekdot.ru/last/mem/');
     });
 
@@ -722,7 +921,7 @@ class PromotionsScene extends Phaser.Scene {
     promoBg.lineStyle(2, strokeColor);
     promoBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
 
-    const text = canClaim ? 'Ежедневная реклама +1 алмаз (Доступно!)' : 'Ежедневная реклама +1 алмаз (Недоступно)';
+    const text = canClaim ? 'Ежедневная реклама +1 монета (Доступно!)' : 'Ежедневная реклама +1 монета (Недоступно)';
     const color = canClaim ? '#222222' : '#666666';
     
     const rewardText = this.add.text(x, y, text, {
@@ -734,8 +933,9 @@ class PromotionsScene extends Phaser.Scene {
       rewardText.setInteractive()
         .on('pointerdown', () => {
           if (GameData.claimDailyReward()) {
-            this.showMessage('Получен 1 алмаз! Возвращайтесь завтра!');
-            rewardText.setText('Ежедневная реклама +1 алмаз (Недоступно)');
+            SoundManager.playSound(this, 'coin', 1.8);
+            this.showMessage('Получена 1 монета! Возвращайтесь завтра!');
+            rewardText.setText('Ежедневная реклама +1 монета (Недоступно)');
             rewardText.setFill('#666666');
             // Перерисовываем фон
             promoBg.clear();
@@ -843,6 +1043,59 @@ class PromotionsScene extends Phaser.Scene {
       });
     return button;
   }
+
+  createSoundButton(x, y) {
+    // Инициализируем состояние звука
+    SoundManager.getMuteState();
+    
+    // Создаем кнопку звука
+    const soundButton = this.add.text(x, y, SoundManager.isMuted ? '🔇' : '🔊', {
+      font: 'bold 32px Arial',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5).setInteractive();
+    
+    soundButton.on('pointerdown', () => {
+      // Простое переключение звука без сложных overlay
+      SoundManager.toggleMute();
+      soundButton.setText(SoundManager.isMuted ? '🔇' : '🔊');
+      SoundManager.updateMuteState(this);
+      
+      // Показываем уведомление
+      this.showSoundNotification(x, y - 60);
+    });
+    
+    soundButton.on('pointerover', () => {
+      soundButton.setScale(1.2);
+    });
+    
+    soundButton.on('pointerout', () => {
+      soundButton.setScale(1);
+    });
+  }
+  
+  showSoundNotification(x, y) {
+    // Создаем временное уведомление
+    const notification = this.add.text(x, y, SoundManager.isMuted ? 'ЗВУК ВЫКЛЮЧЕН' : 'ЗВУК ВКЛЮЧЁН', {
+      font: 'bold 16px Commissioner',
+      fill: SoundManager.isMuted ? '#FF4444' : '#44FF44',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // Анимация появления и исчезновения
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: y - 30,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
+    });
+  }
 }
 
 // Таблица лидеров
@@ -851,12 +1104,28 @@ class LeaderboardScene extends Phaser.Scene {
     super('LeaderboardScene');
   }
 
+  preload() {
+    // Загружаем фон меню для совместимости
+    this.load.image('bgMenu', 'bgMenu.png');
+    
+    // Загружаем звуки
+    this.load.audio('MM', 'MM.mp3');
+  }
+
   create() {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
 
-    // Фон
-    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x222222);
+    // Фон таблицы лидеров
+    const bgLeader = this.add.image(gameWidth / 2, gameHeight / 2, 'bgMenu');
+    bgLeader.setDisplaySize(gameWidth, gameHeight);
+    bgLeader.setAlpha(0.6); // Делаем немного прозрачным для лучшей читаемости
+
+    // Запускаем фоновую музыку меню
+    SoundManager.playMusic(this, 'MM', 0.008);
+    
+    // Кнопка управления звуком в правом верхнем углу
+    this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
 
     // Заголовок
     this.add.text(gameWidth / 2, gameHeight * 0.08, 'ТАБЛИЦА ЛИДЕРОВ', {
@@ -942,6 +1211,59 @@ class LeaderboardScene extends Phaser.Scene {
       });
     return button;
   }
+
+  createSoundButton(x, y) {
+    // Инициализируем состояние звука
+    SoundManager.getMuteState();
+    
+    // Создаем кнопку звука
+    const soundButton = this.add.text(x, y, SoundManager.isMuted ? '🔇' : '🔊', {
+      font: 'bold 32px Arial',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5).setInteractive();
+    
+    soundButton.on('pointerdown', () => {
+      // Простое переключение звука без сложных overlay
+      SoundManager.toggleMute();
+      soundButton.setText(SoundManager.isMuted ? '🔇' : '🔊');
+      SoundManager.updateMuteState(this);
+      
+      // Показываем уведомление
+      this.showSoundNotification(x, y - 60);
+    });
+    
+    soundButton.on('pointerover', () => {
+      soundButton.setScale(1.2);
+    });
+    
+    soundButton.on('pointerout', () => {
+      soundButton.setScale(1);
+    });
+  }
+  
+  showSoundNotification(x, y) {
+    // Создаем временное уведомление
+    const notification = this.add.text(x, y, SoundManager.isMuted ? 'ЗВУК ВЫКЛЮЧЕН' : 'ЗВУК ВКЛЮЧЁН', {
+      font: 'bold 16px Commissioner',
+      fill: SoundManager.isMuted ? '#FF4444' : '#44FF44',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // Анимация появления и исчезновения
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: y - 30,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
+    });
+  }
 }
 
 // Основная игра (модифицированная)
@@ -955,9 +1277,41 @@ class MainScene extends Phaser.Scene {
   }
 
   preload() {
+    // Машинки игрока
     this.load.image('car', 'car.png');
+    this.load.image('carL', 'carL.png');
+    this.load.image('carR', 'carR.png');
+    
+    // Дорога и окружение
+    this.load.image('roadL', 'roadL.png');
+    this.load.image('roadM', 'roadM.png');
+    this.load.image('roadR', 'roadR.png');
+    
+    // Бонусы и монеты
+    this.load.image('bonus1', 'bonus1.png');
+    this.load.image('bonus2', 'bonus2.png');
+    this.load.image('coin1', 'coin1.png');
+    this.load.image('coin2', 'coin2.png');
+    
+    // Препятствия (машинки)
+    this.load.image('ec', 'ec.png');
+    this.load.image('ec1', 'ec1.png');
+    this.load.image('ec2', 'ec2.png');
+    
+    // Фон меню и персонаж
+    this.load.image('bgMenu', 'bgMenu.png');
+    this.load.image('man1', 'man1.png');
+    this.load.image('man2', 'man2.png');
+    
+    // Старые спрайты для совместимости
     this.load.image('bonus', 'bonus.png');
     this.load.image('obstacle', 'obstacle.png');
+    
+    // Загружаем все звуки
+    this.load.audio('GM', 'GM.mp3');
+    this.load.audio('smash', 'smash.mp3');
+    this.load.audio('coin', 'coin.mp3');
+    this.load.audio('benz', 'benz.mp3');
   }
 
   create() {
@@ -978,29 +1332,31 @@ class MainScene extends Phaser.Scene {
     this.createBackgroundElements();
 
     this.player = this.physics.add.sprite(gameWidth / 2, gameHeight * 0.8, 'car');
-    this.player.setDisplaySize(gameWidth * 0.2, gameHeight * 0.09);
+    this.player.setDisplaySize(gameWidth * 0.15, gameHeight * 0.08);
     this.player.setCollideWorldBounds(true);
     this.player.lane = 1;
-
-    // Добавляем тень для машинки
-    this.playerShadow = this.add.ellipse(this.player.x, this.player.y + 30, gameWidth * 0.18, gameHeight * 0.03, 0x000000, 0.4);
+    this.player.currentDirection = 'center'; // Отслеживаем текущее направление
 
     this.obstacles = this.physics.add.group();
     this.bonuses = this.physics.add.group();
-    this.extraBonuses = this.physics.add.group(); // Новая группа для алмазов
+    this.extraBonuses = this.physics.add.group(); // Новая группа для монет
 
     this.physics.add.overlap(this.player, this.obstacles, () => this.handleGameOver(), null, this);
     this.physics.add.overlap(this.player, this.bonuses, (player, bonus) => {
       bonus.destroy();
       this.score += 50;
+      // Воспроизводим звук сбора бензина
+      SoundManager.playSound(this, 'benz', 1.0);
       this.createScoreEffect(bonus.x, bonus.y, '+50');
     }, null, this);
 
-    // Обработка сбора алмазов
-    this.physics.add.overlap(this.player, this.extraBonuses, (player, diamond) => {
-      diamond.destroy();
+    // Обработка сбора монеток (экстра бонусов)
+    this.physics.add.overlap(this.player, this.extraBonuses, (player, coin) => {
+      coin.destroy();
       GameData.addDiamonds(1);
-      this.createScoreEffect(diamond.x, diamond.y, '+1💎');
+      // Воспроизводим звук сбора монетки
+      SoundManager.playSound(this, 'coin', 1.8);
+      this.createScoreEffect(coin.x, coin.y, '+1');
       this.updateDiamondsDisplay();
     }, null, this);
 
@@ -1012,8 +1368,11 @@ class MainScene extends Phaser.Scene {
       strokeThickness: 2
     });
 
-    // Отображение алмазов
-    this.diamondsText = this.add.text(20, 60, `💎 ${GameData.getDiamonds()}`, {
+    // Отображение монет в игре
+    const gameCoinIcon = this.add.image(20, 75, 'coin1');
+    gameCoinIcon.setDisplaySize(gameWidth * 0.12, gameHeight * 0.07);
+    gameCoinIcon.setOrigin(0, 0.5);
+    this.diamondsText = this.add.text(70, 60, `${GameData.getDiamonds()}`, {
       font: 'bold 20px Commissioner',
       fill: '#FFEE00',
       stroke: '#222222',
@@ -1052,102 +1411,103 @@ class MainScene extends Phaser.Scene {
         }
       }
     });
+
+    // Принудительно останавливаем всю предыдущую музыку
+    if (this.sound && this.sound.sounds) {
+      this.sound.sounds.forEach(sound => {
+        if (sound.isPlaying) {
+          sound.stop();
+        }
+      });
+    }
+    
+    // Запускаем игровую музыку
+    SoundManager.playMusic(this, 'GM', 0.175);
+    
+    // Кнопка управления звуком в правом верхнем углу
+    this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
   }
 
   createRoad() {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
     
-    // Основная дорога (асфальт)
-    this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x2c2c2c);
+    // Размеры для новой дороги
+    const sideWidth = gameWidth * 0.2; // Ширина боковых частей
+    const centerWidth = gameWidth * 0.6; // Ширина центральной дороги
     
-    // Обочины с травой
-    const shoulderWidth = gameWidth * 0.15;
-    this.add.rectangle(shoulderWidth / 2, gameHeight / 2, shoulderWidth, gameHeight, 0x228B22);
-    this.add.rectangle(gameWidth - shoulderWidth / 2, gameHeight / 2, shoulderWidth, gameHeight, 0x228B22);
+    // Создаем группы для анимированных элементов дороги
+    this.roadElements = this.add.group();
     
-    // Боковые ограждения
-    this.add.rectangle(shoulderWidth, gameHeight / 2, 8, gameHeight, 0xFFFFFF);
-    this.add.rectangle(gameWidth - shoulderWidth, gameHeight / 2, 8, gameHeight, 0xFFFFFF);
+    // Создаем несколько копий дороги для бесконечной прокрутки
+    for (let i = 0; i < 3; i++) {
+      const yOffset = i * gameHeight - gameHeight;
+      
+      // Левая часть (roadL)
+      const roadLeft = this.add.image(sideWidth / 2, gameHeight / 2 + yOffset, 'roadL');
+      roadLeft.setDisplaySize(sideWidth, gameHeight);
+      this.roadElements.add(roadLeft);
+      
+      // Центральная дорога (roadM)
+      const roadCenter = this.add.image(gameWidth / 2, gameHeight / 2 + yOffset, 'roadM');
+      roadCenter.setDisplaySize(centerWidth, gameHeight);
+      this.roadElements.add(roadCenter);
+      
+      // Правая часть (roadR)
+      const roadRight = this.add.image(gameWidth - sideWidth / 2, gameHeight / 2 + yOffset, 'roadR');
+      roadRight.setDisplaySize(sideWidth, gameHeight);
+      this.roadElements.add(roadRight);
+    }
     
-    // Разметка полос движения
-    const roadWidth = gameWidth - (shoulderWidth * 2);
-    const roadStart = shoulderWidth;
+    // Настройка параметров для игровой логики
+    const roadStart = sideWidth;
+    const roadWidth = centerWidth;
     const laneWidth = roadWidth / this.laneCount;
-    
-    // Центральные линии между полосами
-    for (let i = 1; i < this.laneCount; i++) {
-      const x = roadStart + i * laneWidth;
-      for (let y = 0; y < gameHeight; y += 60) {
-        this.add.rectangle(x, y, 4, 30, 0xFFFF00);
-      }
-    }
-    
-    // Боковые пунктирные линии
-    for (let y = 0; y < gameHeight; y += 40) {
-      this.add.rectangle(roadStart + 20, y, 2, 20, 0xFFFFFF);
-      this.add.rectangle(gameWidth - shoulderWidth - 20, y, 2, 20, 0xFFFFFF);
-    }
     
     this.laneWidth = laneWidth;
     this.roadStart = roadStart;
   }
 
   createBackgroundElements() {
-    const gameWidth = this.sys.game.config.width;
-    const gameHeight = this.sys.game.config.height;
-    const shoulderWidth = gameWidth * 0.15;
-    
-    // Деревья на обочинах
-    for (let i = 0; i < 12; i++) {
-      const side = i % 2;
-      const x = side === 0 ? shoulderWidth / 2 : gameWidth - shoulderWidth / 2;
-      const y = (i / 2) * (gameHeight / 6) + 50;
-      
-      this.add.rectangle(x, y, 15, 50, 0x8B4513);
-      this.add.circle(x, y - 25, 30, 0x006400);
-      this.add.ellipse(x + 10, y + 25, 40, 15, 0x000000, 0.3);
-    }
-    
-    // Здания на заднем плане
-    for (let i = 0; i < 8; i++) {
-      const side = i % 2;
-      const x = side === 0 ? -30 : gameWidth + 30;
-      const y = (i / 2) * (gameHeight / 4) + 100;
-      const height = Phaser.Math.Between(80, 150);
-      const width = Phaser.Math.Between(40, 80);
-      
-      this.add.rectangle(x, y - height/2, width, height, 0x696969);
-      for (let j = 0; j < 3; j++) {
-        for (let k = 0; k < Math.floor(height/30); k++) {
-          if (Phaser.Math.Between(0, 100) < 60) {
-            this.add.rectangle(x - width/3 + j * width/3, y - height/2 + k * 25, 8, 8, 0xFFFF00, 0.8);
-          }
-        }
-      }
-    }
+    // Удаляем старые фоновые элементы, так как теперь используем спрайты дороги
+    // Новые спрайты roadL, roadM, roadR уже содержат все необходимые элементы окружения
   }
 
   createScoreEffect(x, y, text) {
-    const scoreText = this.add.text(x, y, text, {
-      font: 'bold 20px Arial',
-      fill: text.includes('💎') ? '#00FFFF' : '#00ff00',
-      stroke: '#000',
-      strokeThickness: 2
-    }).setOrigin(0.5);
-    
-    this.tweens.add({
-      targets: scoreText,
-      y: y - 50,
-      alpha: 0,
-      duration: 1000,
-      ease: 'Power2',
-      onComplete: () => scoreText.destroy()
-    });
+    if (text === '+1') {
+      // Для монет создаем иконку вместо текста
+      const coinEffect = this.add.image(x, y, 'coin1');
+      coinEffect.setDisplaySize(this.sys.game.config.width * 0.06, this.sys.game.config.height * 0.04);
+      
+      this.tweens.add({
+        targets: coinEffect,
+        y: y - 50,
+        alpha: 0,
+        duration: 1000,
+        ease: 'Power2',
+        onComplete: () => coinEffect.destroy()
+      });
+    } else {
+      const scoreText = this.add.text(x, y, text, {
+        font: 'bold 20px Arial',
+        fill: '#00ff00',
+        stroke: '#000',
+        strokeThickness: 2
+      }).setOrigin(0.5);
+      
+      this.tweens.add({
+        targets: scoreText,
+        y: y - 50,
+        alpha: 0,
+        duration: 1000,
+        ease: 'Power2',
+        onComplete: () => scoreText.destroy()
+      });
+    }
   }
 
   updateDiamondsDisplay() {
-    this.diamondsText.setText(`💎 ${GameData.getDiamonds()}`);
+    this.diamondsText.setText(`${GameData.getDiamonds()}`);
     this.diamondsText.setStyle({
       font: 'bold 20px Commissioner',
       fill: '#FFEE00',
@@ -1167,8 +1527,8 @@ class MainScene extends Phaser.Scene {
     this.score += delta * 0.01;
     this.scoreText.setText('СЧЕТ: ' + Math.floor(this.score));
 
-    // Спавн алмазов каждые 30 секунд
-    if (time - this.lastDiamondSpawnTime > 30000) {
+    // Спавн монеток каждые 25 секунд
+    if (time - this.lastDiamondSpawnTime > 25000) {
       const randomLane = Phaser.Math.Between(0, 2);
       this.spawnObject('extrabonus', randomLane);
       this.lastDiamondSpawnTime = time;
@@ -1183,7 +1543,7 @@ class MainScene extends Phaser.Scene {
         if (placedObstacles < 2 && Phaser.Math.Between(0, 1000) < 300) {
           this.spawnObject('obstacle', lane);
           placedObstacles++;
-        } else if (Phaser.Math.Between(0, 1000) < 60) { // Уменьшено с 120 до 60
+        } else if (Phaser.Math.Between(0, 1000) < 80) { // Увеличено до 80 для лучшего баланса
           this.spawnObject('bonus', lane);
         }
       }
@@ -1194,8 +1554,15 @@ class MainScene extends Phaser.Scene {
     this.bonuses.children.iterate(child => child.y += this.speed * delta / 1000);
     this.extraBonuses.children.iterate(child => child.y += this.speed * delta / 1000);
     
-    this.playerShadow.x = this.player.x;
-    this.playerShadow.y = this.player.y + 30;
+    // Анимация дороги - движение элементов вниз для создания эффекта езды
+    this.roadElements.children.iterate(roadElement => {
+      roadElement.y += this.speed * delta / 1000 * 0.5; // Дорога движется медленнее объектов
+      
+      // Если элемент дороги ушел за нижний край экрана, перемещаем его наверх
+      if (roadElement.y > this.sys.game.config.height * 1.5) {
+        roadElement.y -= this.sys.game.config.height * 3;
+      }
+    });
   }
 
   spawnObject(type, lane) {
@@ -1203,37 +1570,117 @@ class MainScene extends Phaser.Scene {
     const y = -60;
     
     if (type === 'extrabonus') {
-      // Создаем алмаз
-      const diamond = this.extraBonuses.create(x, y, 'bonus');
-      diamond.setDisplaySize(this.sys.game.config.width * 0.1, this.sys.game.config.height * 0.05);
-      diamond.setTint(0x00FFFF); // Голубой цвет для алмазов
-      diamond.setImmovable(true);
+      // Создаем монетку с анимацией кадров
+      const coin = this.extraBonuses.create(x, y, 'coin1');
+      coin.setDisplaySize(this.sys.game.config.width * 0.1, this.sys.game.config.height * 0.08);
+      coin.setImmovable(true);
       
-      // Добавляем мерцание
+      // Анимация переключения между coin1 и coin2
+      this.time.addEvent({
+        delay: 500,
+        callback: () => {
+          if (coin && coin.active) {
+            if (coin.texture.key === 'coin1') {
+              coin.setTexture('coin2');
+            } else {
+              coin.setTexture('coin1');
+            }
+          }
+        },
+        repeat: -1
+      });
+      
+      // Легкое мерцание
       this.tweens.add({
-        targets: diamond,
-        alpha: 0.3,
-        duration: 500,
+        targets: coin,
+        alpha: 0.8,
+        duration: 1000,
         yoyo: true,
         repeat: -1
       });
-    } else {
-      const group = (type === 'bonus') ? this.bonuses : this.obstacles;
-      const sprite = group.create(x, y, type);
-      sprite.setDisplaySize(this.sys.game.config.width * 0.14, this.sys.game.config.height * 0.07);
+    } else if (type === 'bonus') {
+      // Создаем бонус с анимацией кадров
+      const sprite = this.bonuses.create(x, y, 'bonus1');
+      sprite.setDisplaySize(this.sys.game.config.width * 0.12, this.sys.game.config.height * 0.08);
+      sprite.setImmovable(true);
+      
+      // Анимация переключения между bonus1 и bonus2
+      this.time.addEvent({
+        delay: 400,
+        callback: () => {
+          if (sprite && sprite.active) {
+            if (sprite.texture.key === 'bonus1') {
+              sprite.setTexture('bonus2');
+            } else {
+              sprite.setTexture('bonus1');
+            }
+          }
+        },
+        repeat: -1
+      });
+    } else if (type === 'obstacle') {
+      // Используем новые спрайты препятствий (машинки)
+      const obstacleTextures = ['ec', 'ec1', 'ec2'];
+      const obstacleTexture = obstacleTextures[Phaser.Math.Between(0, 2)];
+      const sprite = this.obstacles.create(x, y, obstacleTexture);
+      sprite.setDisplaySize(this.sys.game.config.width * 0.14, this.sys.game.config.height * 0.09);
       sprite.setImmovable(true);
     }
   }
 
   changeLane(dir) {
     if (this.gameOverFlag) return;
-    this.player.lane = Phaser.Math.Clamp(this.player.lane + dir, 0, this.laneCount - 1);
-    this.player.x = this.roadStart + this.player.lane * this.laneWidth + this.laneWidth / 2;
+    
+    const newLane = Phaser.Math.Clamp(this.player.lane + dir, 0, this.laneCount - 1);
+    if (newLane !== this.player.lane) {
+      this.player.lane = newLane;
+      
+      // Меняем спрайт и анимируем тень в зависимости от направления поворота
+      if (dir > 0) {
+        this.player.setTexture('carR');
+        this.player.currentDirection = 'right';
+        this.tweens.add({
+            targets: this.playerShadow,
+            scaleX: 1.1,
+            angle: 15,
+            duration: 150,
+            yoyo: true,
+            ease: 'Sine.easeInOut'
+        });
+      } else {
+        this.player.setTexture('carL');
+        this.player.currentDirection = 'left';
+        this.tweens.add({
+            targets: this.playerShadow,
+            scaleX: 1.1,
+            angle: -15,
+            duration: 150,
+            yoyo: true,
+            ease: 'Sine.easeInOut'
+        });
+      }
+      
+      // Возвращаем обычный спрайт через короткое время
+      this.time.delayedCall(300, () => {
+        if (this.player && !this.gameOverFlag) {
+          this.player.setTexture('car');
+          this.player.currentDirection = 'center';
+        }
+      });
+      
+      this.player.x = this.roadStart + this.player.lane * this.laneWidth + this.laneWidth / 2;
+    }
   }
 
   handleGameOver() {
     if (this.gameOverFlag) return;
     this.gameOverFlag = true;
+
+    // Воспроизводим звук столкновения
+    SoundManager.playSound(this, 'smash', 0.7);
+    
+    // Останавливаем игровую музыку
+    SoundManager.stopMusic(this);
 
     // Сохраняем счет
     GameData.saveScore(this.score);
@@ -1263,13 +1710,44 @@ class MainScene extends Phaser.Scene {
       strokeThickness: 2
     }).setOrigin(0.5);
     
-    // Счет
-    this.add.text(gameWidth / 2, gameHeight / 2 - 40, 'Итоговый счет: ' + Math.floor(this.score), { 
+    // Счет с анимацией прокрутки
+    this.finalScoreText = this.add.text(gameWidth / 2, gameHeight / 2 - 40, 'Итоговый счет: 0', { 
       font: 'bold 20px Commissioner', 
       fill: '#C8C8C8',
       stroke: '#222222',
       strokeThickness: 1
     }).setOrigin(0.5);
+    
+    // Анимация прокрутки счета от 0 до финального значения
+    const finalScore = Math.floor(this.score);
+    const scoreCounter = { value: 0 };
+    
+    this.tweens.add({
+      targets: scoreCounter,
+      value: finalScore,
+      duration: 2000, // 2 секунды анимации
+      ease: 'Power2',
+      onUpdate: () => {
+        this.finalScoreText.setText('Итоговый счет: ' + Math.floor(scoreCounter.value));
+        // Добавляем эффект мерцания во время подсчета
+        if (scoreCounter.value < finalScore) {
+          this.finalScoreText.setFill('#FFEE00');
+        } else {
+          this.finalScoreText.setFill('#C8C8C8');
+        }
+      },
+      onComplete: () => {
+        // Финальный эффект при завершении подсчета
+        this.tweens.add({
+          targets: this.finalScoreText,
+          scaleX: 1.2,
+          scaleY: 1.2,
+          duration: 200,
+          yoyo: true,
+          ease: 'Back.easeOut'
+        });
+      }
+    });
     
     // Кнопка "Начать заново"
     this.createGameOverButton(gameWidth / 2, gameHeight / 2 + 10, 'НАЧАТЬ ЗАНОВО', () => {
@@ -1344,6 +1822,59 @@ class MainScene extends Phaser.Scene {
         this.changeLane(1);
       }
     }
+  }
+
+  createSoundButton(x, y) {
+    // Инициализируем состояние звука
+    SoundManager.getMuteState();
+    
+    // Создаем кнопку звука
+    const soundButton = this.add.text(x, y, SoundManager.isMuted ? '🔇' : '🔊', {
+      font: 'bold 32px Arial',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5).setInteractive();
+    
+    soundButton.on('pointerdown', () => {
+      // Простое переключение звука без сложных overlay
+      SoundManager.toggleMute();
+      soundButton.setText(SoundManager.isMuted ? '🔇' : '🔊');
+      SoundManager.updateMuteState(this);
+      
+      // Показываем уведомление
+      this.showSoundNotification(x, y - 60);
+    });
+    
+    soundButton.on('pointerover', () => {
+      soundButton.setScale(1.2);
+    });
+    
+    soundButton.on('pointerout', () => {
+      soundButton.setScale(1);
+    });
+  }
+  
+  showSoundNotification(x, y) {
+    // Создаем временное уведомление
+    const notification = this.add.text(x, y, SoundManager.isMuted ? 'ЗВУК ВЫКЛЮЧЕН' : 'ЗВУК ВКЛЮЧЁН', {
+      font: 'bold 16px Commissioner',
+      fill: SoundManager.isMuted ? '#FF4444' : '#44FF44',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // Анимация появления и исчезновения
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: y - 30,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
+    });
   }
 }
 
