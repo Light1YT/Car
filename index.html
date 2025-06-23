@@ -211,15 +211,14 @@ class GameData {
   
   static getNextLocation() {
     const current = this.getCurrentLocation();
-    const locations = ['locSand', 'locbridge', 'loccity'];
     
-    // Циклическая смена локаций для гарантированного попадания во все
-    if (current === 'locSand') {
+    // Логика переходов: Город/Пляж → Мост → Город/Пляж → Мост
+    if (current === 'locSand' || current === 'loccity') {
+      // После любой основной локации (город или пляж) всегда идет мост
       return 'locbridge';
-    } else if (current === 'locbridge') {
-      return 'loccity';
-    } else { // loccity
-      return 'locSand';
+    } else { // locbridge
+      // После моста случайно выбираем город или пляж
+      return Math.random() < 0.5 ? 'locSand' : 'loccity';
     }
   }
   
@@ -288,53 +287,85 @@ class MenuScene extends Phaser.Scene {
 
     // Новые кнопки меню (используем новые спрайты)
     // Кнопка "Играть"
-    const playButton = this.add.image(gameWidth * 0.25, gameHeight * 0.42, 'playButton');
+    const playButton = this.add.image(gameWidth / 2, gameHeight * 0.28, 'playButton');
     playButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
     playButton.setInteractive();
     
     playButton.on('pointerdown', () => {
       this.scene.start('MainScene');
+    })
+    .on('pointerover', () => {
+      playButton.setTint(0xffffff);
+      playButton.setAlpha(0.8);
+    })
+    .on('pointerout', () => {
+      playButton.clearTint();
+      playButton.setAlpha(1);
     });
     
 
 
     // Кнопка "Магазин"
-    const shopButton = this.add.image(gameWidth * 0.25, gameHeight * 0.54, 'shopButton');
+    const shopButton = this.add.image(gameWidth / 2, gameHeight * 0.38, 'shopButton');
     shopButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
     shopButton.setInteractive();
     
     shopButton.on('pointerdown', () => {
       this.scene.start('ShopScene');
+    })
+    .on('pointerover', () => {
+      shopButton.setTint(0xffffff);
+      shopButton.setAlpha(0.8);
+    })
+    .on('pointerout', () => {
+      shopButton.clearTint();
+      shopButton.setAlpha(1);
     });
     
 
 
     // Кнопка "Акции"
-    const actionsButton = this.add.image(gameWidth * 0.25, gameHeight * 0.66, 'actionsButton');
+    const actionsButton = this.add.image(gameWidth / 2, gameHeight * 0.48, 'actionsButton');
     actionsButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
     actionsButton.setInteractive();
     
     actionsButton.on('pointerdown', () => {
       this.scene.start('PromotionsScene');
+    })
+    .on('pointerover', () => {
+      actionsButton.setTint(0xffffff);
+      actionsButton.setAlpha(0.8);
+    })
+    .on('pointerout', () => {
+      actionsButton.clearTint();
+      actionsButton.setAlpha(1);
     });
     
 
 
     // Кнопка "Таблица лидеров"
-    const lbButton = this.add.image(gameWidth * 0.25, gameHeight * 0.78, 'lbButton');
-    lbButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.1);
+    const lbButton = this.add.image(gameWidth / 2, gameHeight * 0.58, 'lbButton');
+    lbButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
     lbButton.setInteractive();
     
     lbButton.on('pointerdown', () => {
       this.scene.start('LeaderboardScene');
+    })
+    .on('pointerover', () => {
+      lbButton.setTint(0xffffff);
+      lbButton.setAlpha(0.8);
+    })
+    .on('pointerout', () => {
+      lbButton.clearTint();
+      lbButton.setAlpha(1);
     });
     
 
 
-    // Добавляем персонажа в правую часть экрана (отзеркаленный, приподнятый)
-    const character = this.add.image(gameWidth * 0.75, gameHeight * 0.7, 'man1');
-    character.setDisplaySize(gameWidth * 0.45, gameHeight * 0.7);
-    character.setFlipX(true); // Отзеркаливаем горизонтально
+    // Добавляем персонажа в центр нижней части экрана, касающимся низа
+    const character = this.add.image(gameWidth / 2, gameHeight * 0.8, 'man1');
+    character.setDisplaySize(gameWidth * 0.46, gameHeight * 0.46);
+    character.setFlipX(false); // Убираем отзеркаливание
     
     // Анимация персонажа (переключение между man1 и man2)
     this.time.addEvent({
@@ -370,6 +401,12 @@ class MenuScene extends Phaser.Scene {
       
       // Показываем уведомление
       this.showSoundNotification(x, y - 60);
+    })
+    .on('pointerover', () => {
+      soundButton.setScale(1.1);
+    })
+    .on('pointerout', () => {
+      soundButton.setScale(1);
     });
   }
   
@@ -396,7 +433,7 @@ class MenuScene extends Phaser.Scene {
   }
 }
 
-// Магазин
+// Магазин  
 class ShopScene extends Phaser.Scene {
   constructor() {
     super('ShopScene');
@@ -438,19 +475,8 @@ class ShopScene extends Phaser.Scene {
     this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
 
     // Заголовок магазина (используем shopName)
-    const shopNameImage = this.add.image(gameWidth / 2, gameHeight * 0.08, 'shopName');
-    shopNameImage.setDisplaySize(gameWidth * 0.6, gameHeight * 0.12);
-
-    // Баланс
-    const diamonds = GameData.getDiamonds();
-    const balanceCoinIcon = this.add.image(gameWidth / 2 - 40, gameHeight * 0.15, 'coin1');
-    balanceCoinIcon.setDisplaySize(gameWidth * 0.09, gameHeight * 0.06);
-    this.diamondsText = this.add.text(gameWidth / 2 - 10, gameHeight * 0.15, `Баланс: ${diamonds}`, {
-      font: 'bold 22px Commissioner',
-      fill: '#FFEE00',
-      stroke: '#222222',
-      strokeThickness: 1
-    }).setOrigin(0, 0.5);
+    const shopNameImage = this.add.image(gameWidth / 2, gameHeight * 0.12, 'shopName');
+    shopNameImage.setDisplaySize(gameWidth * 0.7, gameHeight * 0.1);
 
     // Товары (используем новые изображения кнопок)
     const items = [
@@ -461,17 +487,53 @@ class ShopScene extends Phaser.Scene {
     ];
 
     items.forEach((item, index) => {
-      const y = gameHeight * 0.25 + index * (gameHeight * 0.1);
+      const y = gameHeight * 0.28 + index * (gameHeight * 0.14);
       this.createShopItem(gameWidth / 2, y, item);
     });
 
+    // Отображение монет в правом нижнем углу на уровне кнопки НАЗАД
+    const coinIcon = this.add.image(gameWidth * 0.6, gameHeight * 0.9, 'coin1');
+    coinIcon.setDisplaySize(gameWidth * 0.16, gameHeight * 0.1);
+    coinIcon.setOrigin(0.5, 0.5);
+    
+    // Анимация иконки монетки
+    this.time.addEvent({
+      delay: 600,
+      callback: () => {
+        if (coinIcon && coinIcon.active) {
+          if (coinIcon.texture.key === 'coin1') {
+            coinIcon.setTexture('coin2');
+          } else {
+            coinIcon.setTexture('coin1');
+          }
+        }
+      },
+      repeat: -1
+    });
+    
+    // Текст количества монет
+    this.coinsText = this.add.text(gameWidth * 0.8, gameHeight * 0.895, `${GameData.getDiamonds()}`, {
+      font: 'bold 48px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 3
+    }).setOrigin(0.5, 0.5);
+
     // Кнопка назад (используем b1)
     const backButton = this.add.image(gameWidth * 0.15, gameHeight * 0.9, 'b1');
-    backButton.setDisplaySize(gameWidth * 0.2, gameHeight * 0.08);
+    backButton.setDisplaySize(gameWidth * 0.25, gameHeight * 0.08);
     backButton.setInteractive();
     
     backButton.on('pointerdown', () => {
       this.scene.start('MenuScene');
+    })
+    .on('pointerover', () => {
+      backButton.setTint(0xcccccc);
+      backButton.setAlpha(0.9);
+    })
+    .on('pointerout', () => {
+      backButton.clearTint();
+      backButton.setAlpha(1);
     });
   }
 
@@ -549,11 +611,19 @@ class ShopScene extends Phaser.Scene {
     
     // Используем изображение кнопки товара
     const itemButton = this.add.image(x, y, item.buttonImage);
-    itemButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
+    itemButton.setDisplaySize(gameWidth * 0.85, gameHeight * 0.1);
     itemButton.setInteractive();
     
     itemButton.on('pointerdown', () => {
       this.buyItem(item);
+    })
+    .on('pointerover', () => {
+      itemButton.setTint(0xf0f0f0);
+      itemButton.setScale(1.02);
+    })
+    .on('pointerout', () => {
+      itemButton.clearTint();
+      itemButton.setScale(1);
     });
   }
 
@@ -566,7 +636,7 @@ class ShopScene extends Phaser.Scene {
         // Воспроизводим звук покупки (монетка)
         SoundManager.playSound(this, 'coin', 1.8);
         this.showPurchaseConfirmation(item);
-        this.updateDiamondsDisplay();
+        this.updateCoinsDisplay();
       } else {
         this.showMessage('Недостаточно монет!');
       }
@@ -610,7 +680,7 @@ class ShopScene extends Phaser.Scene {
       if (GameData.spendDiamonds(item.price)) {
         this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
         this.showPurchaseConfirmation(item);
-        this.updateDiamondsDisplay();
+        this.updateCoinsDisplay();
       } else {
         this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
         this.showMessage('Недостаточно монет!');
@@ -728,16 +798,7 @@ class ShopScene extends Phaser.Scene {
     });
   }
 
-  updateDiamondsDisplay() {
-    const diamonds = GameData.getDiamonds();
-    this.diamondsText.setText(`Баланс: ${diamonds}`);
-    this.diamondsText.setStyle({
-      font: 'bold 22px Commissioner',
-      fill: '#FFEE00',
-      stroke: '#222222',
-      strokeThickness: 1
-    });
-  }
+
 
   createButton(x, y, text, style, callback) {
     const button = this.add.text(x, y, text, style)
@@ -768,6 +829,12 @@ class ShopScene extends Phaser.Scene {
       
       // Показываем уведомление
       this.showSoundNotification(x, y - 60);
+    })
+    .on('pointerover', () => {
+      soundButton.setScale(1.1);
+    })
+    .on('pointerout', () => {
+      soundButton.setScale(1);
     });
   }
   
@@ -791,6 +858,10 @@ class ShopScene extends Phaser.Scene {
         notification.destroy();
       }
     });
+  }
+
+  updateCoinsDisplay() {
+    this.coinsText.setText(`${GameData.getDiamonds()}`);
   }
 }
 
@@ -833,45 +904,89 @@ class PromotionsScene extends Phaser.Scene {
     this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
 
     // Заголовок акций (используем actionName)
-    const actionNameImage = this.add.image(gameWidth / 2, gameHeight * 0.08, 'actionName');
-    actionNameImage.setDisplaySize(gameWidth * 0.6, gameHeight * 0.12);
+    const actionNameImage = this.add.image(gameWidth / 2, gameHeight * 0.15, 'actionName');
+    actionNameImage.setDisplaySize(gameWidth * 0.9, gameHeight * 0.12);
 
     // Ежедневная награда (используем daily)
-    const dailyButton = this.add.image(gameWidth / 2, gameHeight * 0.25, 'daily');
-    dailyButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
-    dailyButton.setInteractive();
-    this.createDailyRewardButton(dailyButton);
+    this.dailyButton = this.add.image(gameWidth / 2, gameHeight * 0.32, 'daily');
+    this.dailyButton.setDisplaySize(gameWidth * 0.85, gameHeight * 0.08);
+    this.dailyButton.setInteractive();
+    this.createDailyRewardButton(this.dailyButton);
     
-    // Двойная награда в выходные (используем dbl)
-    const dblButton = this.add.image(gameWidth / 2, gameHeight * 0.38, 'dbl');
-    dblButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
-    dblButton.setInteractive();
-    
-    // Мем за алмаз (используем mem)
-    const memButton = this.add.image(gameWidth / 2, gameHeight * 0.51, 'mem');
-    memButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
-    memButton.setInteractive();
-    
-    memButton.on('pointerdown', () => {
-      this.openLink('https://www.anekdot.ru/last/mem/');
+    // Добавляем эффекты наведения
+    this.dailyButton.on('pointerover', () => {
+      if (this.dailyButton.alpha === 1.0) { // Только если кнопка активна
+        this.dailyButton.setTint(0xeeeeee);
+      }
+    })
+    .on('pointerout', () => {
+      this.dailyButton.clearTint();
     });
     
-    // Специальные предложения (используем special)
-    const specialButton = this.add.image(gameWidth / 2, gameHeight * 0.64, 'special');
-    specialButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
+    // Двойная награда в выходные (используем dbl)
+    const dblButton = this.add.image(gameWidth / 2, gameHeight * 0.46, 'dbl');
+    dblButton.setDisplaySize(gameWidth * 0.85, gameHeight * 0.08);
+    dblButton.setInteractive();
+    
+    dblButton.on('pointerdown', () => {
+      this.showMessage('Акция действует только в выходные!');
+    })
+    .on('pointerover', () => {
+      dblButton.setTint(0xeeeeee);
+    })
+    .on('pointerout', () => {
+      dblButton.clearTint();
+    });
+    
+    // Специальные предложения (используем special) - меньше по горизонтали, больше по вертикали
+    const specialButton = this.add.image(gameWidth / 2, gameHeight * 0.6, 'special');
+    specialButton.setDisplaySize(gameWidth * 0.75, gameHeight * 0.12);
     specialButton.setInteractive();
     
     specialButton.on('pointerdown', () => {
       this.openLink('https://koreanaparts.ru/specpredlozheniya-i-akcii-kompanii-koreana-sankt-peterburg');
+    })
+    .on('pointerover', () => {
+      specialButton.setTint(0xffffff);
+      specialButton.setAlpha(0.9);
+    })
+    .on('pointerout', () => {
+      specialButton.clearTint();
+      specialButton.setAlpha(1);
+    });
+    
+    // Мем за монеты (используем mem)
+    const memButton = this.add.image(gameWidth / 2, gameHeight * 0.74, 'mem');
+    memButton.setDisplaySize(gameWidth * 0.85, gameHeight * 0.08);
+    memButton.setInteractive();
+    
+    memButton.on('pointerdown', () => {
+      this.openLink('https://www.anekdot.ru/last/mem/');
+    })
+    .on('pointerover', () => {
+      memButton.setTint(0xffffff);
+      memButton.setAlpha(0.9);
+    })
+    .on('pointerout', () => {
+      memButton.clearTint();
+      memButton.setAlpha(1);
     });
 
-    // Кнопка назад (используем b2)
-    const backButton = this.add.image(gameWidth * 0.15, gameHeight * 0.82, 'b2');
-    backButton.setDisplaySize(gameWidth * 0.2, gameHeight * 0.08);
+    // Кнопка назад (используем b2) - на том же месте что и в магазине
+    const backButton = this.add.image(gameWidth * 0.15, gameHeight * 0.9, 'b2');
+    backButton.setDisplaySize(gameWidth * 0.25, gameHeight * 0.08);
     backButton.setInteractive();
     
     backButton.on('pointerdown', () => {
       this.scene.start('MenuScene');
+    })
+    .on('pointerover', () => {
+      backButton.setTint(0xcccccc);
+      backButton.setAlpha(0.9);
+    })
+    .on('pointerout', () => {
+      backButton.clearTint();
+      backButton.setAlpha(1);
     });
   }
 
@@ -915,17 +1030,24 @@ class PromotionsScene extends Phaser.Scene {
     if (canClaim) {
       button.setAlpha(1.0); // Полная яркость если доступно
       button.on('pointerdown', () => {
-        if (GameData.claimDailyReward()) {
-          SoundManager.playSound(this, 'coin', 1.8);
-          this.showMessage('Получена 1 монета! Возвращайтесь завтра!');
-          button.setAlpha(0.5); // Делаем тусклой
-          button.removeInteractive();
-        }
+        this.claimDailyReward();
       });
-      
-
     } else {
       button.setAlpha(0.5); // Тусклая если недоступно
+    }
+  }
+
+  claimDailyReward() {
+    if (GameData.claimDailyReward()) {
+      SoundManager.playSound(this, 'coin', 1.8);
+      this.showMessage('Получена 1 монета! Возвращайтесь завтра!');
+      // Обновляем состояние кнопки
+      if (this.dailyButton) {
+        this.dailyButton.setAlpha(0.5);
+        this.dailyButton.removeInteractive();
+      }
+    } else {
+      this.showMessage('Награда уже получена сегодня!');
     }
   }
 
@@ -1030,6 +1152,12 @@ class PromotionsScene extends Phaser.Scene {
       
       // Показываем уведомление
       this.showSoundNotification(x, y - 60);
+    })
+    .on('pointerover', () => {
+      soundButton.setScale(1.1);
+    })
+    .on('pointerout', () => {
+      soundButton.setScale(1);
     });
   }
   
@@ -1065,6 +1193,9 @@ class LeaderboardScene extends Phaser.Scene {
   preload() {
     // Загружаем фон меню для совместимости
     this.load.image('bgMenu', 'Menu/BG.png');
+    
+    // Загружаем кнопку назад
+    this.load.image('b2', 'Actions/b2.png');
     
     // Загружаем звуки
     this.load.audio('MM', 'MM.mp3');
@@ -1115,9 +1246,21 @@ class LeaderboardScene extends Phaser.Scene {
       });
     }
 
-    // Кнопка назад
-    this.createBackButton(gameWidth * 0.15, gameHeight * 0.9, 'НАЗАД', () => {
+    // Кнопка назад (используем b2 как в других разделах)
+    const backButton = this.add.image(gameWidth * 0.15, gameHeight * 0.9, 'b2');
+    backButton.setDisplaySize(gameWidth * 0.25, gameHeight * 0.08);
+    backButton.setInteractive();
+    
+    backButton.on('pointerdown', () => {
       this.scene.start('MenuScene');
+    })
+    .on('pointerover', () => {
+      backButton.setTint(0xcccccc);
+      backButton.setAlpha(0.9);
+    })
+    .on('pointerout', () => {
+      backButton.clearTint();
+      backButton.setAlpha(1);
     });
   }
 
@@ -1190,13 +1333,11 @@ class LeaderboardScene extends Phaser.Scene {
       
       // Показываем уведомление
       this.showSoundNotification(x, y - 60);
-    });
-    
-    soundButton.on('pointerover', () => {
-      soundButton.setScale(1.05);
-    });
-    
-    soundButton.on('pointerout', () => {
+    })
+    .on('pointerover', () => {
+      soundButton.setScale(1.1);
+    })
+    .on('pointerout', () => {
       soundButton.setScale(1);
     });
   }
@@ -1321,10 +1462,19 @@ class MainScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.obstacles, () => this.handleGameOver(), null, this);
     this.physics.add.overlap(this.player, this.bonuses, (player, bonus) => {
       bonus.destroy();
-      this.score += 50;
+      
+      // Применяем множитель к бонусам
+      let bonusScore = 50;
+      if (this.score >= 4000) {
+        bonusScore = Math.round(50 * 1.55); // 78 очков
+      } else if (this.score >= 2000) {
+        bonusScore = Math.round(50 * 1.2); // 60 очков
+      }
+      
+      this.score += bonusScore;
       // Воспроизводим звук сбора бензина
       SoundManager.playSound(this, 'benz', 1.0);
-      this.createScoreEffect(bonus.x, bonus.y, '+50');
+      this.createScoreEffect(bonus.x, bonus.y, `+${bonusScore}`);
     }, null, this);
 
     // Обработка сбора монеток (экстра бонусов)
@@ -1346,15 +1496,33 @@ class MainScene extends Phaser.Scene {
     });
 
     // Отображение монет в игре
-    const gameCoinIcon = this.add.image(20, 75, 'coin1');
+    const gameCoinIcon = this.add.image(14, 75, 'coin1');
     gameCoinIcon.setDisplaySize(gameWidth * 0.12, gameHeight * 0.07);
     gameCoinIcon.setOrigin(0, 0.5);
-    this.diamondsText = this.add.text(70, 60, `${GameData.getDiamonds()}`, {
+    
+    // Анимация иконки монетки в интерфейсе
+    this.time.addEvent({
+      delay: 600,
+      callback: () => {
+        if (gameCoinIcon && gameCoinIcon.active) {
+          if (gameCoinIcon.texture.key === 'coin1') {
+            gameCoinIcon.setTexture('coin2');
+          } else {
+            gameCoinIcon.setTexture('coin1');
+          }
+        }
+      },
+      repeat: -1
+    });
+    
+    this.diamondsText = this.add.text(70, 61.5, `${GameData.getDiamonds()}`, {
       font: 'bold 20px Commissioner',
       fill: '#FFEE00',
       stroke: '#222222',
       strokeThickness: 1
     });
+
+
 
     this.input.keyboard.on('keydown-LEFT', () => this.changeLane(-1));
     this.input.keyboard.on('keydown-RIGHT', () => this.changeLane(1));
@@ -1504,21 +1672,45 @@ class MainScene extends Phaser.Scene {
       this.nextSpeedUp = time + 5000;
     }
 
-    this.score += delta * 0.01;
-    this.scoreText.setText('СЧЕТ: ' + Math.floor(this.score));
+    // Система множителей очков
+    let scoreMultiplier = 1.0;
+    let multiplierText = '';
+    
+    if (this.score >= 4000) {
+      scoreMultiplier = 1.55; // +20% + 35% = +55%
+      multiplierText = 'x1.55';
+    } else if (this.score >= 2000) {
+      scoreMultiplier = 1.2; // +20%
+      multiplierText = 'x1.2';
+    }
+    
+    // Проверяем достижение новых уровней множителей
+    const oldScore = this.score;
+    this.score += delta * 0.01 * scoreMultiplier;
+    
+    // Показываем уведомление при достижении новых уровней
+    if (oldScore < 2000 && this.score >= 2000) {
+      this.showMultiplierNotification('МНОЖИТЕЛЬ x1.2!', '+20% очков');
+    } else if (oldScore < 4000 && this.score >= 4000) {
+      this.showMultiplierNotification('МНОЖИТЕЛЬ x1.55!', '+55% очков');
+    }
+    
+    // Обновляем отображение счета с множителем
+    const scoreDisplay = multiplierText ? `СЧЕТ: ${Math.floor(this.score)} ${multiplierText}` : `СЧЕТ: ${Math.floor(this.score)}`;
+    this.scoreText.setText(scoreDisplay);
     
     // Проверяем смену локации с разными таймерами для каждой локации
     let locationDuration;
     switch (this.currentLocation) {
-      case 'locSand': // Пляж - 15 секунд
-      case 'loccity': // Город - 15 секунд
-        locationDuration = 15000;
+      case 'locSand': // Пляж - 25 секунд
+      case 'loccity': // Город - 25 секунд
+        locationDuration = 25000;
         break;
       case 'locbridge': // Мост - 10 секунд
         locationDuration = 10000;
         break;
       default:
-        locationDuration = 15000;
+        locationDuration = 25000;
     }
     
     if (time - this.lastLocationChangeTime > locationDuration) {
@@ -1537,12 +1729,25 @@ class MainScene extends Phaser.Scene {
       const lanes = Phaser.Utils.Array.Shuffle([0, 1, 2]);
       let placedObstacles = 0;
 
+      // Динамическая сложность: начинаем с 10%, постепенно увеличиваем до 30%
+      const gameTimeSeconds = Math.floor(this.score / 100); // Примерно секунды игры
+      const baseDifficulty = 100; // Начальные 10%
+      const maxDifficulty = 300; // Максимальные 30%
+      const difficultyIncrease = Math.min(gameTimeSeconds * 3, maxDifficulty - baseDifficulty); // +3% каждые ~10 секунд
+      const currentObstacleChance = baseDifficulty + difficultyIncrease;
+
+      // Бонусы тоже слегка увеличиваются
+      const baseBonusChance = 40; // Начальные 4%
+      const maxBonusChance = 80; // Максимальные 8%
+      const bonusIncrease = Math.min(gameTimeSeconds * 1, maxBonusChance - baseBonusChance);
+      const currentBonusChance = baseBonusChance + bonusIncrease;
+
       for (let i = 0; i < lanes.length; i++) {
         const lane = lanes[i];
-        if (placedObstacles < 2 && Phaser.Math.Between(0, 1000) < 300) {
+        if (placedObstacles < 2 && Phaser.Math.Between(0, 1000) < currentObstacleChance) {
           this.spawnObject('obstacle', lane);
           placedObstacles++;
-        } else if (Phaser.Math.Between(0, 1000) < 80) { // Увеличено до 80 для лучшего баланса
+        } else if (Phaser.Math.Between(0, 1000) < currentBonusChance) {
           this.spawnObject('bonus', lane);
         }
       }
@@ -1566,8 +1771,9 @@ class MainScene extends Phaser.Scene {
           roadElement.setTexture(this.newLocationTexture);
           this.transitionProgress++;
           
-          // Показываем уведомление когда переход завершен на 70% (2 из 3 элементов)
-          if (this.transitionProgress === 2) {
+          // Если все 3 элемента дороги обновились, переход завершен
+          if (this.transitionProgress >= 3) {
+            // Показываем уведомление когда переход полностью завершен
             let locationName;
             switch (this.currentLocation) {
               case 'locSand':
@@ -1583,10 +1789,7 @@ class MainScene extends Phaser.Scene {
                 locationName = 'НОВАЯ ЛОКАЦИЯ';
             }
             this.showLocationNotification(locationName);
-          }
-          
-          // Если все 3 элемента дороги обновились, переход завершен
-          if (this.transitionProgress >= 3) {
+            
             this.isLocationTransitioning = false;
             this.newLocationTexture = null;
             this.transitionProgress = 0;
@@ -1603,7 +1806,7 @@ class MainScene extends Phaser.Scene {
     if (type === 'extrabonus') {
       // Создаем монетку с анимацией кадров
       const coin = this.extraBonuses.create(x, y, 'coin1');
-      coin.setDisplaySize(this.sys.game.config.width * 0.1, this.sys.game.config.height * 0.08);
+      coin.setDisplaySize(this.sys.game.config.width * 0.13, this.sys.game.config.height * 0.1);
       coin.setImmovable(true);
       
       // Анимация переключения между coin1 и coin2
@@ -1733,7 +1936,7 @@ class MainScene extends Phaser.Scene {
     const gameHeight = this.sys.game.config.height;
     
     // Создаем уведомление о смене локации
-    const notification = this.add.text(gameWidth / 2, gameHeight / 2, `НОВАЯ ЛОКАЦИЯ:\n${locationName}`, {
+    const notification = this.add.text(gameWidth / 2, gameHeight / 2, locationName, {
       font: 'bold 32px Commissioner',
       fill: '#FFEE00',
       stroke: '#222222',
@@ -1758,6 +1961,51 @@ class MainScene extends Phaser.Scene {
       ease: 'Power2',
       onComplete: () => {
         notification.destroy();
+      }
+    });
+  }
+
+  showMultiplierNotification(title, subtitle) {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+    
+    // Создаем уведомление о множителе
+    const notification = this.add.text(gameWidth / 2, gameHeight / 2 - 50, title, {
+      font: 'bold 28px Commissioner',
+      fill: '#00FF00',
+      stroke: '#222222',
+      strokeThickness: 3,
+      align: 'center'
+    }).setOrigin(0.5);
+    
+    const subtitleNotification = this.add.text(gameWidth / 2, gameHeight / 2 - 10, subtitle, {
+      font: 'bold 20px Commissioner',
+      fill: '#FFFFFF',
+      stroke: '#222222',
+      strokeThickness: 2,
+      align: 'center'
+    }).setOrigin(0.5);
+    
+    // Анимация появления
+    this.tweens.add({
+      targets: [notification, subtitleNotification],
+      scaleX: 1.3,
+      scaleY: 1.3,
+      duration: 300,
+      yoyo: true,
+      ease: 'Back.easeOut'
+    });
+    
+    // Анимация исчезновения
+    this.tweens.add({
+      targets: [notification, subtitleNotification],
+      alpha: 0,
+      duration: 2500,
+      delay: 500,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+        subtitleNotification.destroy();
       }
     });
   }
@@ -1978,13 +2226,11 @@ class MainScene extends Phaser.Scene {
       
       // Показываем уведомление
       this.showSoundNotification(x, y - 60);
-    });
-    
-    soundButton.on('pointerover', () => {
-      soundButton.setScale(1.05);
-    });
-    
-    soundButton.on('pointerout', () => {
+    })
+    .on('pointerover', () => {
+      soundButton.setScale(1.1);
+    })
+    .on('pointerout', () => {
       soundButton.setScale(1);
     });
   }
