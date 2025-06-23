@@ -1292,8 +1292,15 @@ class MainScene extends Phaser.Scene {
     const gameHeight = this.sys.game.config.height;
     this.laneWidth = gameWidth / this.laneCount;
     
-    // Инициализируем текущую локацию
-    this.currentLocation = GameData.getCurrentLocation();
+    // Сбрасываем локацию и таймер при начале новой игры
+    GameData.setCurrentLocation('locSand'); // Всегда начинаем с пустыни
+    this.currentLocation = 'locSand';
+    this.lastLocationChangeTime = 0;
+    
+    // Инициализируем флаги плавного перехода локаций
+    this.isLocationTransitioning = false;
+    this.newLocationTexture = null;
+    this.transitionProgress = 0;
 
     // Создаем дорогу и фоновые элементы
     this.createRoad();
@@ -1500,8 +1507,21 @@ class MainScene extends Phaser.Scene {
     this.score += delta * 0.01;
     this.scoreText.setText('СЧЕТ: ' + Math.floor(this.score));
     
-    // Проверяем смену локации каждые 10 секунд для тестирования
-    if (time - this.lastLocationChangeTime > 10000) {
+    // Проверяем смену локации с разными таймерами для каждой локации
+    let locationDuration;
+    switch (this.currentLocation) {
+      case 'locSand': // Пляж - 15 секунд
+      case 'loccity': // Город - 15 секунд
+        locationDuration = 15000;
+        break;
+      case 'locbridge': // Мост - 10 секунд
+        locationDuration = 10000;
+        break;
+      default:
+        locationDuration = 15000;
+    }
+    
+    if (time - this.lastLocationChangeTime > locationDuration) {
       this.changeLocation();
       this.lastLocationChangeTime = time;
     }
@@ -1540,6 +1560,19 @@ class MainScene extends Phaser.Scene {
       // Если элемент дороги ушел за нижний край экрана, перемещаем его наверх
       if (roadElement.y > this.sys.game.config.height * 1.5) {
         roadElement.y -= this.sys.game.config.height * 3;
+        
+        // Если идет переход локации, меняем текстуру элемента который появляется сверху
+        if (this.isLocationTransitioning && this.newLocationTexture) {
+          roadElement.setTexture(this.newLocationTexture);
+          this.transitionProgress++;
+          
+          // Если все 3 элемента дороги обновились, переход завершен
+          if (this.transitionProgress >= 3) {
+            this.isLocationTransitioning = false;
+            this.newLocationTexture = null;
+            this.transitionProgress = 0;
+          }
+        }
       }
     });
   }
@@ -1644,12 +1677,35 @@ class MainScene extends Phaser.Scene {
     
     this.showLocationNotification(locationName);
     
-    // Обновляем фон дороги
-    this.updateRoadBackground();
+    // Запускаем плавную смену фона дороги
+    this.startLocationTransition();
   }
   
-  updateRoadBackground() {
+  startLocationTransition() {
     // Определяем новое изображение для локации
+    let newRoadImage;
+    switch (this.currentLocation) {
+      case 'locSand':
+        newRoadImage = 'bgsand';
+        break;
+      case 'locbridge':
+        newRoadImage = 'bridge';
+        break;
+      case 'loccity':
+        newRoadImage = 'city';
+        break;
+      default:
+        newRoadImage = 'bgsand';
+    }
+    
+    // Помечаем что нужен переход к новой локации
+    this.isLocationTransitioning = true;
+    this.newLocationTexture = newRoadImage;
+    this.transitionProgress = 0; // Сколько элементов уже переключилось
+  }
+
+  updateRoadBackground() {
+    // Этот метод теперь используется только для мгновенной смены (например, при создании)
     let roadImage;
     switch (this.currentLocation) {
       case 'locSand':
