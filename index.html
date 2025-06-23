@@ -1957,13 +1957,11 @@ class MainScene extends Phaser.Scene {
 
 const config = {
   type: Phaser.AUTO,
-  width: 360,
-  height: 780,
+  width: window.innerWidth,
+  height: window.innerHeight,
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 360,
-    height: 780
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.CENTER_BOTH
   },
   physics: { default: 'arcade' },
   scene: [MenuScene, ShopScene, PromotionsScene, LeaderboardScene, MainScene]
