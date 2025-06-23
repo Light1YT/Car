@@ -288,7 +288,7 @@ class MenuScene extends Phaser.Scene {
     // Новые кнопки меню (используем новые спрайты)
     // Кнопка "Играть"
     const playButton = this.add.image(gameWidth / 2, gameHeight * 0.28, 'playButton');
-    playButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    playButton.setDisplaySize(gameWidth * 0.5, gameHeight * 0.08);
     playButton.setInteractive();
     
     playButton.on('pointerdown', () => {
@@ -307,7 +307,7 @@ class MenuScene extends Phaser.Scene {
 
     // Кнопка "Магазин"
     const shopButton = this.add.image(gameWidth / 2, gameHeight * 0.38, 'shopButton');
-    shopButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    shopButton.setDisplaySize(gameWidth * 0.5, gameHeight * 0.08);
     shopButton.setInteractive();
     
     shopButton.on('pointerdown', () => {
@@ -326,7 +326,7 @@ class MenuScene extends Phaser.Scene {
 
     // Кнопка "Акции"
     const actionsButton = this.add.image(gameWidth / 2, gameHeight * 0.48, 'actionsButton');
-    actionsButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    actionsButton.setDisplaySize(gameWidth * 0.5, gameHeight * 0.08);
     actionsButton.setInteractive();
     
     actionsButton.on('pointerdown', () => {
@@ -345,7 +345,7 @@ class MenuScene extends Phaser.Scene {
 
     // Кнопка "Таблица лидеров"
     const lbButton = this.add.image(gameWidth / 2, gameHeight * 0.58, 'lbButton');
-    lbButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    lbButton.setDisplaySize(gameWidth * 0.5, gameHeight * 0.08);
     lbButton.setInteractive();
     
     lbButton.on('pointerdown', () => {
@@ -619,11 +619,9 @@ class ShopScene extends Phaser.Scene {
     })
     .on('pointerover', () => {
       itemButton.setTint(0xf0f0f0);
-      itemButton.setScale(1.02);
     })
     .on('pointerout', () => {
       itemButton.clearTint();
-      itemButton.setScale(1);
     });
   }
 
@@ -1473,7 +1471,7 @@ class MainScene extends Phaser.Scene {
       
       this.score += bonusScore;
       // Воспроизводим звук сбора бензина
-      SoundManager.playSound(this, 'benz', 1.0);
+              SoundManager.playSound(this, 'benz', 0.5);
       this.createScoreEffect(bonus.x, bonus.y, `+${bonusScore}`);
     }, null, this);
 
