@@ -288,7 +288,7 @@ class MenuScene extends Phaser.Scene {
     // Новые кнопки меню (используем новые спрайты)
     // Кнопка "Играть"
     const playButton = this.add.image(gameWidth / 2, gameHeight * 0.28, 'playButton');
-    playButton.setDisplaySize(gameWidth * 0.5, gameHeight * 0.08);
+    playButton.setDisplaySize(gameWidth * 0.6, gameHeight * 0.08);
     playButton.setInteractive();
     
     playButton.on('pointerdown', () => {
@@ -307,7 +307,7 @@ class MenuScene extends Phaser.Scene {
 
     // Кнопка "Магазин"
     const shopButton = this.add.image(gameWidth / 2, gameHeight * 0.38, 'shopButton');
-    shopButton.setDisplaySize(gameWidth * 0.5, gameHeight * 0.08);
+    shopButton.setDisplaySize(gameWidth * 0.6, gameHeight * 0.08);
     shopButton.setInteractive();
     
     shopButton.on('pointerdown', () => {
@@ -326,7 +326,7 @@ class MenuScene extends Phaser.Scene {
 
     // Кнопка "Акции"
     const actionsButton = this.add.image(gameWidth / 2, gameHeight * 0.48, 'actionsButton');
-    actionsButton.setDisplaySize(gameWidth * 0.5, gameHeight * 0.08);
+    actionsButton.setDisplaySize(gameWidth * 0.6, gameHeight * 0.08);
     actionsButton.setInteractive();
     
     actionsButton.on('pointerdown', () => {
@@ -345,7 +345,7 @@ class MenuScene extends Phaser.Scene {
 
     // Кнопка "Таблица лидеров"
     const lbButton = this.add.image(gameWidth / 2, gameHeight * 0.58, 'lbButton');
-    lbButton.setDisplaySize(gameWidth * 0.5, gameHeight * 0.08);
+    lbButton.setDisplaySize(gameWidth * 0.6, gameHeight * 0.08);
     lbButton.setInteractive();
     
     lbButton.on('pointerdown', () => {
@@ -364,7 +364,7 @@ class MenuScene extends Phaser.Scene {
 
     // Добавляем персонажа в центр нижней части экрана, касающимся низа
     const character = this.add.image(gameWidth / 2, gameHeight * 0.8, 'man1');
-    character.setDisplaySize(gameWidth * 0.46, gameHeight * 0.46);
+    character.setDisplaySize(gameWidth * 0.45, gameHeight * 0.52);
     character.setFlipX(false); // Убираем отзеркаливание
     
     // Анимация персонажа (переключение между man1 и man2)
