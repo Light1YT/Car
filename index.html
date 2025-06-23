@@ -1566,6 +1566,25 @@ class MainScene extends Phaser.Scene {
           roadElement.setTexture(this.newLocationTexture);
           this.transitionProgress++;
           
+          // Показываем уведомление когда переход завершен на 70% (2 из 3 элементов)
+          if (this.transitionProgress === 2) {
+            let locationName;
+            switch (this.currentLocation) {
+              case 'locSand':
+                locationName = 'ПЛЯЖ';
+                break;
+              case 'locbridge':
+                locationName = 'МОСТ';
+                break;
+              case 'loccity':
+                locationName = 'ГОРОД';
+                break;
+              default:
+                locationName = 'НОВАЯ ЛОКАЦИЯ';
+            }
+            this.showLocationNotification(locationName);
+          }
+          
           // Если все 3 элемента дороги обновились, переход завершен
           if (this.transitionProgress >= 3) {
             this.isLocationTransitioning = false;
@@ -1658,24 +1677,6 @@ class MainScene extends Phaser.Scene {
     // Меняем локацию
     const newLocation = GameData.advanceLocation();
     this.currentLocation = newLocation;
-    
-    // Показываем уведомление о смене локации
-    let locationName;
-    switch (newLocation) {
-      case 'locSand':
-        locationName = 'ПУСТЫНЯ';
-        break;
-      case 'locbridge':
-        locationName = 'МОСТ';
-        break;
-      case 'loccity':
-        locationName = 'ГОРОД';
-        break;
-      default:
-        locationName = 'НОВАЯ ЛОКАЦИЯ';
-    }
-    
-    this.showLocationNotification(locationName);
     
     // Запускаем плавную смену фона дороги
     this.startLocationTransition();
