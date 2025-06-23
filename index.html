@@ -1,8 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Yellow Car Game</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Commissioner:wght@400;700&display=swap');
@@ -196,6 +199,35 @@ class GameData {
     // Принудительно устанавливаем тестовый баланс (для решения проблем с кешем)
     this.save('diamonds', 1000);
   }
+  
+  // Новые методы для управления локациями
+  static getCurrentLocation() {
+    return this.load('currentLocation', 'locSand'); // По умолчанию песчаная локация
+  }
+  
+  static setCurrentLocation(location) {
+    this.save('currentLocation', location);
+  }
+  
+  static getNextLocation() {
+    const current = this.getCurrentLocation();
+    const locations = ['locSand', 'locbridge', 'loccity'];
+    
+    // Циклическая смена локаций для гарантированного попадания во все
+    if (current === 'locSand') {
+      return 'locbridge';
+    } else if (current === 'locbridge') {
+      return 'loccity';
+    } else { // loccity
+      return 'locSand';
+    }
+  }
+  
+  static advanceLocation() {
+    const nextLocation = this.getNextLocation();
+    this.setCurrentLocation(nextLocation);
+    return nextLocation;
+  }
 }
 
 // Главное меню
@@ -205,25 +237,21 @@ class MenuScene extends Phaser.Scene {
   }
 
   preload() {
-    // Загружаем фон меню и персонажей
-    this.load.image('bgMenu', 'bgMenu.png');
-    this.load.image('man1', 'man1.png');
-    this.load.image('man2', 'man2.png');
+    // Загружаем фон меню и персонажей из папки Menu
+    this.load.image('bgMenu', 'Menu/BG.png');
+    this.load.image('man1', 'Menu/man1.png');
+    this.load.image('man2', 'Menu/man2.png');
     
     // Загружаем спрайты монет для отображения в меню
     this.load.image('coin1', 'coin1.png');
     this.load.image('coin2', 'coin2.png');
     
-    // Загружаем новые элементы интерфейса
-    this.load.image('logo', 'logo.png');
-    this.load.image('gameR', 'gameR.png');
-    this.load.image('game', 'game.png');
-    this.load.image('shopR', 'shopR.png');
-    this.load.image('shop', 'shop.png');
-    this.load.image('actionR', 'actionR.png');
-    this.load.image('action', 'action.png');
-    this.load.image('leaderboardR', 'leaderboardR.png');
-    this.load.image('leaderboard', 'leaderboard.png');
+    // Загружаем новые элементы интерфейса из папки Menu
+    this.load.image('logo', 'Menu/Logo.png');
+    this.load.image('playButton', 'Menu/Play.png');
+    this.load.image('shopButton', 'Menu/Shop.png');
+    this.load.image('actionsButton', 'Menu/Actions.png');
+    this.load.image('lbButton', 'Menu/Lb.png');
     
     // Загружаем звуки
     this.load.audio('MM', 'MM.mp3');
@@ -258,50 +286,50 @@ class MenuScene extends Phaser.Scene {
     const logo = this.add.image(gameWidth / 2, gameHeight * 0.15, 'logo');
     logo.setDisplaySize(gameWidth * 0.6, gameHeight * 0.12);
 
-    // Новые кнопки меню со спрайтами (скорректирован размер текста)
+    // Новые кнопки меню (используем новые спрайты)
     // Кнопка "Играть"
-    const gameButtonBg = this.add.image(gameWidth * 0.25, gameHeight * 0.42, 'gameR');
-    gameButtonBg.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
-    gameButtonBg.setInteractive();
-    const gameButtonText = this.add.image(gameWidth * 0.25, gameHeight * 0.42, 'game');
-    gameButtonText.setDisplaySize(gameWidth * 0.25, gameHeight * 0.04);
+    const playButton = this.add.image(gameWidth * 0.25, gameHeight * 0.42, 'playButton');
+    playButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    playButton.setInteractive();
     
-    gameButtonBg.on('pointerdown', () => {
+    playButton.on('pointerdown', () => {
       this.scene.start('MainScene');
     });
+    
+
 
     // Кнопка "Магазин"
-    const shopButtonBg = this.add.image(gameWidth * 0.25, gameHeight * 0.54, 'shopR');
-    shopButtonBg.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
-    shopButtonBg.setInteractive();
-    const shopButtonText = this.add.image(gameWidth * 0.25, gameHeight * 0.54, 'shop');
-    shopButtonText.setDisplaySize(gameWidth * 0.25, gameHeight * 0.04);
+    const shopButton = this.add.image(gameWidth * 0.25, gameHeight * 0.54, 'shopButton');
+    shopButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    shopButton.setInteractive();
     
-    shopButtonBg.on('pointerdown', () => {
+    shopButton.on('pointerdown', () => {
       this.scene.start('ShopScene');
     });
+    
+
 
     // Кнопка "Акции"
-    const actionButtonBg = this.add.image(gameWidth * 0.25, gameHeight * 0.66, 'actionR');
-    actionButtonBg.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
-    actionButtonBg.setInteractive();
-    const actionButtonText = this.add.image(gameWidth * 0.25, gameHeight * 0.66, 'action');
-    actionButtonText.setDisplaySize(gameWidth * 0.25, gameHeight * 0.04);
+    const actionsButton = this.add.image(gameWidth * 0.25, gameHeight * 0.66, 'actionsButton');
+    actionsButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    actionsButton.setInteractive();
     
-    actionButtonBg.on('pointerdown', () => {
+    actionsButton.on('pointerdown', () => {
       this.scene.start('PromotionsScene');
     });
+    
+
 
     // Кнопка "Таблица лидеров"
-    const leaderButtonBg = this.add.image(gameWidth * 0.25, gameHeight * 0.78, 'leaderboardR');
-    leaderButtonBg.setDisplaySize(gameWidth * 0.4, gameHeight * 0.1);
-    leaderButtonBg.setInteractive();
-    const leaderButtonText = this.add.image(gameWidth * 0.25, gameHeight * 0.78, 'leaderboard');
-    leaderButtonText.setDisplaySize(gameWidth * 0.3, gameHeight * 0.06);
+    const lbButton = this.add.image(gameWidth * 0.25, gameHeight * 0.78, 'lbButton');
+    lbButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.1);
+    lbButton.setInteractive();
     
-    leaderButtonBg.on('pointerdown', () => {
+    lbButton.on('pointerdown', () => {
       this.scene.start('LeaderboardScene');
     });
+    
+
 
     // Добавляем персонажа в правую часть экрана (отзеркаленный, приподнятый)
     const character = this.add.image(gameWidth * 0.75, gameHeight * 0.7, 'man1');
@@ -343,14 +371,6 @@ class MenuScene extends Phaser.Scene {
       // Показываем уведомление
       this.showSoundNotification(x, y - 60);
     });
-    
-    soundButton.on('pointerover', () => {
-      soundButton.setScale(1.2);
-    });
-    
-    soundButton.on('pointerout', () => {
-      soundButton.setScale(1);
-    });
   }
   
   showSoundNotification(x, y) {
@@ -383,8 +403,16 @@ class ShopScene extends Phaser.Scene {
   }
 
   preload() {
+    // Загружаем изображения магазина из папки Shop
+    this.load.image('shopName', 'Shop/shopName.png');
+    this.load.image('s1', 'Shop/s1.png');
+    this.load.image('s2', 'Shop/s2.png');
+    this.load.image('s3', 'Shop/s3.png');
+    this.load.image('s4', 'Shop/s4.png');
+    this.load.image('b1', 'Shop/b1.png');
+    
     // Загружаем фон меню для совместимости
-    this.load.image('bgMenu', 'bgMenu.png');
+    this.load.image('bgMenu', 'Menu/BG.png');
     // Загружаем спрайты монет
     this.load.image('coin1', 'coin1.png');
     this.load.image('coin2', 'coin2.png');
@@ -409,13 +437,9 @@ class ShopScene extends Phaser.Scene {
     // Кнопка управления звуком в правом верхнем углу
     this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
 
-    // Заголовок
-    this.add.text(gameWidth / 2, gameHeight * 0.08, 'МАГАЗИН ЗАПЧАСТЕЙ', {
-      font: 'bold 32px Commissioner',
-      fill: '#FFEE00',
-      stroke: '#222222',
-      strokeThickness: 2
-    }).setOrigin(0.5);
+    // Заголовок магазина (используем shopName)
+    const shopNameImage = this.add.image(gameWidth / 2, gameHeight * 0.08, 'shopName');
+    shopNameImage.setDisplaySize(gameWidth * 0.6, gameHeight * 0.12);
 
     // Баланс
     const diamonds = GameData.getDiamonds();
@@ -428,12 +452,12 @@ class ShopScene extends Phaser.Scene {
       strokeThickness: 1
     }).setOrigin(0, 0.5);
 
-    // Товары
+    // Товары (используем новые изображения кнопок)
     const items = [
-      { name: 'Скидка 10%', price: 15, description: 'Скидка на все покупки' },
-      { name: 'Скидка 15%', price: 25, description: 'Увеличенная скидка' },
-      { name: 'Скидка 20%', price: 50, description: 'Максимальная скидка' },
-      { name: 'Будильник', price: 15, description: 'Специальный предмет' }
+      { name: 'Скидка 10%', price: 15, description: 'Скидка на все покупки', buttonImage: 's1' },
+      { name: 'Скидка 15%', price: 25, description: 'Увеличенная скидка', buttonImage: 's2' },
+      { name: 'Скидка 20%', price: 50, description: 'Максимальная скидка', buttonImage: 's3' },
+      { name: 'Будильник', price: 15, description: 'Специальный предмет', buttonImage: 's4' }
     ];
 
     items.forEach((item, index) => {
@@ -441,8 +465,12 @@ class ShopScene extends Phaser.Scene {
       this.createShopItem(gameWidth / 2, y, item);
     });
 
-    // Кнопка назад
-    this.createBackButton(gameWidth * 0.15, gameHeight * 0.9, 'НАЗАД', () => {
+    // Кнопка назад (используем b1)
+    const backButton = this.add.image(gameWidth * 0.15, gameHeight * 0.9, 'b1');
+    backButton.setDisplaySize(gameWidth * 0.2, gameHeight * 0.08);
+    backButton.setInteractive();
+    
+    backButton.on('pointerdown', () => {
       this.scene.start('MenuScene');
     });
   }
@@ -519,39 +547,12 @@ class ShopScene extends Phaser.Scene {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
     
-    // Фон товара (уменьшена ширина для предотвращения обрезания)
-    const itemBg = this.add.graphics();
-    itemBg.fillStyle(0xC8C8C8, 0.2);
-    itemBg.fillRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
-    itemBg.lineStyle(2, 0xC8C8C8);
-    itemBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
-
-    // Название товара
-    this.add.text(x - gameWidth * 0.32, y - gameHeight * 0.012, item.name, {
-      font: 'bold 16px Commissioner',
-      fill: '#FFEE00',
-      stroke: '#222222',
-      strokeThickness: 1
-    }).setOrigin(0, 0.5);
-
-    // Описание
-    this.add.text(x - gameWidth * 0.32, y + gameHeight * 0.012, item.description, {
-      font: '12px Commissioner',
-      fill: '#FFFFFF'
-    }).setOrigin(0, 0.5);
-
-    // Цена с иконкой монеты
-    const priceCoinIcon = this.add.image(x + gameWidth * 0.05, y + gameHeight * 0.005 - 5 + 3, 'coin1');
-    priceCoinIcon.setDisplaySize(gameWidth * 0.08, gameHeight * 0.06);
-    this.add.text(x + gameWidth * 0.08, y - gameHeight * 0.008 + 2 + 5 - 3, `${item.price}`, {
-      font: 'bold 19px Commissioner',
-      fill: '#FFEE00',
-      stroke: '#222222',
-      strokeThickness: 1
-    }).setOrigin(0, 0.5);
-
-    // Кнопка купить (поднята на уровень центра элемента)
-    const buyButton = this.createShopButton(x + gameWidth * 0.28, y, 'КУПИТЬ', () => {
+    // Используем изображение кнопки товара
+    const itemButton = this.add.image(x, y, item.buttonImage);
+    itemButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
+    itemButton.setInteractive();
+    
+    itemButton.on('pointerdown', () => {
       this.buyItem(item);
     });
   }
@@ -743,13 +744,7 @@ class ShopScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setPadding(15, 10)
       .setInteractive()
-      .on('pointerdown', callback)
-      .on('pointerover', () => {
-        button.setScale(1.1);
-      })
-      .on('pointerout', () => {
-        button.setScale(1);
-      });
+      .on('pointerdown', callback);
     return button;
   }
 
@@ -773,14 +768,6 @@ class ShopScene extends Phaser.Scene {
       
       // Показываем уведомление
       this.showSoundNotification(x, y - 60);
-    });
-    
-    soundButton.on('pointerover', () => {
-      soundButton.setScale(1.2);
-    });
-    
-    soundButton.on('pointerout', () => {
-      soundButton.setScale(1);
     });
   }
   
@@ -814,8 +801,16 @@ class PromotionsScene extends Phaser.Scene {
   }
 
   preload() {
+    // Загружаем изображения акций из папки Actions
+    this.load.image('actionName', 'Actions/actionName.png');
+    this.load.image('daily', 'Actions/daily.png');
+    this.load.image('dbl', 'Actions/dbl.png');
+    this.load.image('mem', 'Actions/mem.png');
+    this.load.image('special', 'Actions/special.png');
+    this.load.image('b2', 'Actions/b2.png');
+    
     // Загружаем фон меню для совместимости
-    this.load.image('bgMenu', 'bgMenu.png');
+    this.load.image('bgMenu', 'Menu/BG.png');
     
     // Загружаем звуки
     this.load.audio('MM', 'MM.mp3');
@@ -837,39 +832,45 @@ class PromotionsScene extends Phaser.Scene {
     // Кнопка управления звуком в правом верхнем углу
     this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
 
-    // Заголовок в две строки
-    this.add.text(gameWidth / 2, gameHeight * 0.05, 'АКЦИИ И', {
-      font: 'bold 28px Commissioner',
-      fill: '#FFEE00',
-      stroke: '#222222',
-      strokeThickness: 2
-    }).setOrigin(0.5);
+    // Заголовок акций (используем actionName)
+    const actionNameImage = this.add.image(gameWidth / 2, gameHeight * 0.08, 'actionName');
+    actionNameImage.setDisplaySize(gameWidth * 0.6, gameHeight * 0.12);
 
-    this.add.text(gameWidth / 2, gameHeight * 0.1, 'ПРЕДЛОЖЕНИЯ', {
-      font: 'bold 28px Commissioner',
-      fill: '#FFEE00',
-      stroke: '#222222',
-      strokeThickness: 2
-    }).setOrigin(0.5);
-
-    // Ежедневная реклама
-    this.createDailyReward(gameWidth / 2, gameHeight * 0.25);
+    // Ежедневная награда (используем daily)
+    const dailyButton = this.add.image(gameWidth / 2, gameHeight * 0.25, 'daily');
+    dailyButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
+    dailyButton.setInteractive();
+    this.createDailyRewardButton(dailyButton);
     
-    // Двойные монеты в выходные
-    this.createPromotion(gameWidth / 2, gameHeight * 0.38, 'Двойные монеты в выходные!', null);
+    // Двойная награда в выходные (используем dbl)
+    const dblButton = this.add.image(gameWidth / 2, gameHeight * 0.38, 'dbl');
+    dblButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
+    dblButton.setInteractive();
     
-    // Специальное предложение недели
-    this.createPromotion(gameWidth / 2, gameHeight * 0.51, 'Специальное предложение недели', () => {
-      this.openLink('https://koreanaparts.ru/specpredlozheniya-i-akcii-kompanii-koreana-sankt-peterburg');
-    });
+    // Мем за алмаз (используем mem)
+    const memButton = this.add.image(gameWidth / 2, gameHeight * 0.51, 'mem');
+    memButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
+    memButton.setInteractive();
     
-    // Мем за монету
-    this.createPromotion(gameWidth / 2, gameHeight * 0.64, 'Мем за монету', () => {
+    memButton.on('pointerdown', () => {
       this.openLink('https://www.anekdot.ru/last/mem/');
     });
+    
+    // Специальные предложения (используем special)
+    const specialButton = this.add.image(gameWidth / 2, gameHeight * 0.64, 'special');
+    specialButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
+    specialButton.setInteractive();
+    
+    specialButton.on('pointerdown', () => {
+      this.openLink('https://koreanaparts.ru/specpredlozheniya-i-akcii-kompanii-koreana-sankt-peterburg');
+    });
 
-    // Кнопка назад
-    this.createBackButton(gameWidth * 0.15, gameHeight * 0.82, 'НАЗАД', () => {
+    // Кнопка назад (используем b2)
+    const backButton = this.add.image(gameWidth * 0.15, gameHeight * 0.82, 'b2');
+    backButton.setDisplaySize(gameWidth * 0.2, gameHeight * 0.08);
+    backButton.setInteractive();
+    
+    backButton.on('pointerdown', () => {
       this.scene.start('MenuScene');
     });
   }
@@ -908,50 +909,23 @@ class PromotionsScene extends Phaser.Scene {
     return button;
   }
 
-  createDailyReward(x, y) {
-    const gameWidth = this.sys.game.config.width;
-    const gameHeight = this.sys.game.config.height;
+  createDailyRewardButton(button) {
     const canClaim = GameData.canClaimDailyReward();
     
-    const promoBg = this.add.graphics();
-    const bgColor = canClaim ? 0xFFEE00 : 0xC8C8C8;
-    const strokeColor = canClaim ? 0x222222 : 0x666666;
-    promoBg.fillStyle(bgColor, 0.2);
-    promoBg.fillRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
-    promoBg.lineStyle(2, strokeColor);
-    promoBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
-
-    const text = canClaim ? 'Ежедневная реклама +1 монета (Доступно!)' : 'Ежедневная реклама +1 монета (Недоступно)';
-    const color = canClaim ? '#222222' : '#666666';
-    
-    const rewardText = this.add.text(x, y, text, {
-      font: 'bold 14px Commissioner',
-      fill: color
-    }).setOrigin(0.5);
-
     if (canClaim) {
-      rewardText.setInteractive()
-        .on('pointerdown', () => {
-          if (GameData.claimDailyReward()) {
-            SoundManager.playSound(this, 'coin', 1.8);
-            this.showMessage('Получена 1 монета! Возвращайтесь завтра!');
-            rewardText.setText('Ежедневная реклама +1 монета (Недоступно)');
-            rewardText.setFill('#666666');
-            // Перерисовываем фон
-            promoBg.clear();
-            promoBg.fillStyle(0xC8C8C8, 0.2);
-            promoBg.fillRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
-            promoBg.lineStyle(2, 0x666666);
-            promoBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
-            rewardText.removeInteractive();
-          }
-        })
-        .on('pointerover', () => {
-          rewardText.setScale(1.05);
-        })
-        .on('pointerout', () => {
-          rewardText.setScale(1);
-        });
+      button.setAlpha(1.0); // Полная яркость если доступно
+      button.on('pointerdown', () => {
+        if (GameData.claimDailyReward()) {
+          SoundManager.playSound(this, 'coin', 1.8);
+          this.showMessage('Получена 1 монета! Возвращайтесь завтра!');
+          button.setAlpha(0.5); // Делаем тусклой
+          button.removeInteractive();
+        }
+      });
+      
+
+    } else {
+      button.setAlpha(0.5); // Тусклая если недоступно
     }
   }
 
@@ -976,7 +950,6 @@ class PromotionsScene extends Phaser.Scene {
       promoText.setInteractive()
         .on('pointerdown', callback)
         .on('pointerover', () => {
-          promoText.setScale(1.05);
           // Эффект наведения - инвертируем цвета
           promoBg.clear();
           promoBg.fillStyle(0xFFEE00, 0.2);
@@ -986,7 +959,6 @@ class PromotionsScene extends Phaser.Scene {
           promoText.setFill('#222222');
         })
         .on('pointerout', () => {
-          promoText.setScale(1);
           // Возвращаем обычные цвета
           promoBg.clear();
           promoBg.fillStyle(0x222222, 0.2);
@@ -1034,13 +1006,7 @@ class PromotionsScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setPadding(15, 10)
       .setInteractive()
-      .on('pointerdown', callback)
-      .on('pointerover', () => {
-        button.setScale(1.1);
-      })
-      .on('pointerout', () => {
-        button.setScale(1);
-      });
+      .on('pointerdown', callback);
     return button;
   }
 
@@ -1064,14 +1030,6 @@ class PromotionsScene extends Phaser.Scene {
       
       // Показываем уведомление
       this.showSoundNotification(x, y - 60);
-    });
-    
-    soundButton.on('pointerover', () => {
-      soundButton.setScale(1.2);
-    });
-    
-    soundButton.on('pointerout', () => {
-      soundButton.setScale(1);
     });
   }
   
@@ -1106,7 +1064,7 @@ class LeaderboardScene extends Phaser.Scene {
 
   preload() {
     // Загружаем фон меню для совместимости
-    this.load.image('bgMenu', 'bgMenu.png');
+    this.load.image('bgMenu', 'Menu/BG.png');
     
     // Загружаем звуки
     this.load.audio('MM', 'MM.mp3');
@@ -1235,7 +1193,7 @@ class LeaderboardScene extends Phaser.Scene {
     });
     
     soundButton.on('pointerover', () => {
-      soundButton.setScale(1.2);
+      soundButton.setScale(1.05);
     });
     
     soundButton.on('pointerout', () => {
@@ -1266,7 +1224,7 @@ class LeaderboardScene extends Phaser.Scene {
   }
 }
 
-// Основная игра (модифицированная)
+// Основная игра (модифицированная с поддержкой локаций)
 class MainScene extends Phaser.Scene {
   constructor() {
     super('MainScene');
@@ -1274,6 +1232,8 @@ class MainScene extends Phaser.Scene {
     this.touchStartX = 0;
     this.touchStartY = 0;
     this.isTouching = false;
+    this.currentLocation = 'locSand'; // Текущая локация
+    this.lastLocationChangeTime = 0; // Время последней смены локации
   }
 
   preload() {
@@ -1282,10 +1242,26 @@ class MainScene extends Phaser.Scene {
     this.load.image('carL', 'carL.png');
     this.load.image('carR', 'carR.png');
     
-    // Дорога и окружение
-    this.load.image('roadL', 'roadL.png');
-    this.load.image('roadM', 'roadM.png');
-    this.load.image('roadR', 'roadR.png');
+    // Локация locSand (песчаная пустыня)
+    this.load.image('bgsand', 'locSand/bgsand.png');
+    this.load.image('sandCar4', 'locSand/car4.png');
+    this.load.image('sandCar5', 'locSand/car5.png');
+    this.load.image('sandCar6', 'locSand/car6.png');
+    
+    // Локация locbridge (мост)
+    this.load.image('bridge', 'locbridge/bridge.png');
+    this.load.image('bridgeEc', 'locbridge/ec.png');
+    this.load.image('bridgeEc1', 'locbridge/ec1.png');
+    this.load.image('bridgeEc2', 'locbridge/ec2.png');
+    this.load.image('bridgeCar4', 'locbridge/car4.png');
+    this.load.image('bridgeCar5', 'locbridge/car5.png');
+    this.load.image('bridgeCar6', 'locbridge/car6.png');
+    
+    // Локация loccity (город)
+    this.load.image('city', 'loccity/city.png');
+    this.load.image('cityEc', 'loccity/ec.png');
+    this.load.image('cityEc1', 'loccity/ec1.png');
+    this.load.image('cityEc2', 'loccity/ec2.png');
     
     // Бонусы и монеты
     this.load.image('bonus1', 'bonus1.png');
@@ -1293,19 +1269,8 @@ class MainScene extends Phaser.Scene {
     this.load.image('coin1', 'coin1.png');
     this.load.image('coin2', 'coin2.png');
     
-    // Препятствия (машинки)
-    this.load.image('ec', 'ec.png');
-    this.load.image('ec1', 'ec1.png');
-    this.load.image('ec2', 'ec2.png');
-    
-    // Фон меню и персонаж
-    this.load.image('bgMenu', 'bgMenu.png');
-    this.load.image('man1', 'man1.png');
-    this.load.image('man2', 'man2.png');
-    
-    // Старые спрайты для совместимости
-    this.load.image('bonus', 'bonus.png');
-    this.load.image('obstacle', 'obstacle.png');
+    // Фон меню
+    this.load.image('bgMenu', 'Menu/BG.png');
     
     // Загружаем все звуки
     this.load.audio('GM', 'GM.mp3');
@@ -1326,12 +1291,17 @@ class MainScene extends Phaser.Scene {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
     this.laneWidth = gameWidth / this.laneCount;
+    
+    // Инициализируем текущую локацию
+    this.currentLocation = GameData.getCurrentLocation();
 
     // Создаем дорогу и фоновые элементы
     this.createRoad();
     this.createBackgroundElements();
 
-    this.player = this.physics.add.sprite(gameWidth / 2, gameHeight * 0.8, 'car');
+    // Создаем игрока в центральной полосе дороги
+    const playerX = this.roadStart + 1 * this.laneWidth + this.laneWidth / 2; // Центральная полоса (lane 1)
+    this.player = this.physics.add.sprite(playerX, gameHeight * 0.8, 'car');
     this.player.setDisplaySize(gameWidth * 0.15, gameHeight * 0.08);
     this.player.setCollideWorldBounds(true);
     this.player.lane = 1;
@@ -1432,36 +1402,39 @@ class MainScene extends Phaser.Scene {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
     
-    // Размеры для новой дороги
-    const sideWidth = gameWidth * 0.2; // Ширина боковых частей
-    const centerWidth = gameWidth * 0.6; // Ширина центральной дороги
-    
     // Создаем группы для анимированных элементов дороги
     this.roadElements = this.add.group();
+    
+    // Определяем изображение для текущей локации
+    let roadImage;
+    switch (this.currentLocation) {
+      case 'locSand':
+        roadImage = 'bgsand';
+        break;
+      case 'locbridge':
+        roadImage = 'bridge';
+        break;
+      case 'loccity':
+        roadImage = 'city';
+        break;
+      default:
+        roadImage = 'bgsand';
+    }
     
     // Создаем несколько копий дороги для бесконечной прокрутки
     for (let i = 0; i < 3; i++) {
       const yOffset = i * gameHeight - gameHeight;
       
-      // Левая часть (roadL)
-      const roadLeft = this.add.image(sideWidth / 2, gameHeight / 2 + yOffset, 'roadL');
-      roadLeft.setDisplaySize(sideWidth, gameHeight);
-      this.roadElements.add(roadLeft);
-      
-      // Центральная дорога (roadM)
-      const roadCenter = this.add.image(gameWidth / 2, gameHeight / 2 + yOffset, 'roadM');
-      roadCenter.setDisplaySize(centerWidth, gameHeight);
-      this.roadElements.add(roadCenter);
-      
-      // Правая часть (roadR)
-      const roadRight = this.add.image(gameWidth - sideWidth / 2, gameHeight / 2 + yOffset, 'roadR');
-      roadRight.setDisplaySize(sideWidth, gameHeight);
-      this.roadElements.add(roadRight);
+      // Дорога с окружением (полная ширина экрана)
+      const road = this.add.image(gameWidth / 2, gameHeight / 2 + yOffset, roadImage);
+      road.setDisplaySize(gameWidth, gameHeight);
+      this.roadElements.add(road);
     }
     
-    // Настройка параметров для игровой логики
-    const roadStart = sideWidth;
-    const roadWidth = centerWidth;
+    // Настройка параметров для игровой логики (3 полосы только в пределах дорожного полотна)
+    // Дорога занимает центральную часть экрана - примерно 55% ширины
+    const roadWidth = gameWidth * 0.55;
+    const roadStart = gameWidth * 0.225; // Центрируем дорогу
     const laneWidth = roadWidth / this.laneCount;
     
     this.laneWidth = laneWidth;
@@ -1526,6 +1499,12 @@ class MainScene extends Phaser.Scene {
 
     this.score += delta * 0.01;
     this.scoreText.setText('СЧЕТ: ' + Math.floor(this.score));
+    
+    // Проверяем смену локации каждые 10 секунд для тестирования
+    if (time - this.lastLocationChangeTime > 10000) {
+      this.changeLocation();
+      this.lastLocationChangeTime = time;
+    }
 
     // Спавн монеток каждые 25 секунд
     if (time - this.lastDiamondSpawnTime > 25000) {
@@ -1619,13 +1598,111 @@ class MainScene extends Phaser.Scene {
         repeat: -1
       });
     } else if (type === 'obstacle') {
-      // Используем новые спрайты препятствий (машинки)
-      const obstacleTextures = ['ec', 'ec1', 'ec2'];
-      const obstacleTexture = obstacleTextures[Phaser.Math.Between(0, 2)];
+      // Используем машинки препятствий в зависимости от локации
+      let obstacleTextures;
+      switch (this.currentLocation) {
+        case 'locSand':
+          obstacleTextures = ['sandCar4', 'sandCar5', 'sandCar6'];
+          break;
+        case 'locbridge':
+          obstacleTextures = ['bridgeEc', 'bridgeEc1', 'bridgeEc2', 'bridgeCar4', 'bridgeCar5', 'bridgeCar6'];
+          break;
+        case 'loccity':
+          obstacleTextures = ['cityEc', 'cityEc1', 'cityEc2'];
+          break;
+        default:
+          obstacleTextures = ['sandCar4', 'sandCar5', 'sandCar6'];
+      }
+      
+      const obstacleTexture = obstacleTextures[Phaser.Math.Between(0, obstacleTextures.length - 1)];
       const sprite = this.obstacles.create(x, y, obstacleTexture);
       sprite.setDisplaySize(this.sys.game.config.width * 0.14, this.sys.game.config.height * 0.09);
       sprite.setImmovable(true);
     }
+  }
+  
+  changeLocation() {
+    // Меняем локацию
+    const newLocation = GameData.advanceLocation();
+    this.currentLocation = newLocation;
+    
+    // Показываем уведомление о смене локации
+    let locationName;
+    switch (newLocation) {
+      case 'locSand':
+        locationName = 'ПУСТЫНЯ';
+        break;
+      case 'locbridge':
+        locationName = 'МОСТ';
+        break;
+      case 'loccity':
+        locationName = 'ГОРОД';
+        break;
+      default:
+        locationName = 'НОВАЯ ЛОКАЦИЯ';
+    }
+    
+    this.showLocationNotification(locationName);
+    
+    // Обновляем фон дороги
+    this.updateRoadBackground();
+  }
+  
+  updateRoadBackground() {
+    // Определяем новое изображение для локации
+    let roadImage;
+    switch (this.currentLocation) {
+      case 'locSand':
+        roadImage = 'bgsand';
+        break;
+      case 'locbridge':
+        roadImage = 'bridge';
+        break;
+      case 'loccity':
+        roadImage = 'city';
+        break;
+      default:
+        roadImage = 'bgsand';
+    }
+    
+    // Обновляем все элементы дороги
+    this.roadElements.children.iterate(roadElement => {
+      roadElement.setTexture(roadImage);
+    });
+  }
+  
+  showLocationNotification(locationName) {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+    
+    // Создаем уведомление о смене локации
+    const notification = this.add.text(gameWidth / 2, gameHeight / 2, `НОВАЯ ЛОКАЦИЯ:\n${locationName}`, {
+      font: 'bold 32px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 3,
+      align: 'center'
+    }).setOrigin(0.5);
+    
+    // Анимация появления и исчезновения
+    this.tweens.add({
+      targets: notification,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 500,
+      yoyo: true,
+      ease: 'Back.easeOut'
+    });
+    
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      duration: 3000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
+    });
   }
 
   changeLane(dir) {
@@ -1847,7 +1924,7 @@ class MainScene extends Phaser.Scene {
     });
     
     soundButton.on('pointerover', () => {
-      soundButton.setScale(1.2);
+      soundButton.setScale(1.05);
     });
     
     soundButton.on('pointerout', () => {
@@ -1880,17 +1957,20 @@ class MainScene extends Phaser.Scene {
 
 const config = {
   type: Phaser.AUTO,
-  width: window.innerWidth,
-  height: window.innerHeight,
+  width: 360,
+  height: 780,
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: 360,
+    height: 780
+  },
   physics: { default: 'arcade' },
   scene: [MenuScene, ShopScene, PromotionsScene, LeaderboardScene, MainScene]
 };
 
 const game = new Phaser.Game(config);
-
-window.addEventListener('resize', () => {
-  game.scale.resize(window.innerWidth, window.innerHeight);
-});
 </script>
 </body>
 </html>
+

@@ -1,0 +1,2054 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yellow Car Game</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Commissioner:wght@400;700&display=swap');
+    
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+      background: #222222;
+      font-family: 'Commissioner', sans-serif;
+    }
+    canvas { 
+      display: block; 
+      background: transparent;
+      box-shadow: 0 0 20px rgba(255, 238, 0, 0.3);
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
+</head>
+<body>
+
+<script>
+// Р“Р»РѕР±Р°Р»СЊРЅР°СЏ СЃРёСЃС‚РµРјР° СѓРїСЂР°РІР»РµРЅРёСЏ Р·РІСѓРєРѕРј
+class SoundManager {
+  static isMuted = false;
+  static musicVolume = 1.0;
+  static effectsVolume = 1.0;
+  static currentSounds = {}; // РћС‚СЃР»РµР¶РёРІР°РЅРёРµ С‚РµРєСѓС‰РёС… Р·РІСѓРєРѕРІ
+  
+  static init() {
+    this.isMuted = GameData.load('soundMuted', false);
+    this.musicVolume = GameData.load('musicVolume', 1.0);
+    this.effectsVolume = GameData.load('effectsVolume', 1.0);
+  }
+  
+  static toggleMute() {
+    this.isMuted = !this.isMuted;
+    GameData.save('soundMuted', this.isMuted);
+  }
+  
+  static setMusicVolume(volume) {
+    this.musicVolume = Math.max(0, Math.min(1, volume));
+    GameData.save('musicVolume', this.musicVolume);
+  }
+  
+  static setEffectsVolume(volume) {
+    this.effectsVolume = Math.max(0, Math.min(1, volume));
+    GameData.save('effectsVolume', this.effectsVolume);
+  }
+  
+  static getMuteState() {
+    this.init();
+    return this.isMuted;
+  }
+  
+  static playSound(scene, soundKey, baseVolume = 1) {
+    if (!this.isMuted && scene.sound) {
+      // Р”Р»СЏ Р·РІСѓРєР° benz РЅРµ РІРѕСЃРїСЂРѕРёР·РІРѕРґРёРј, РµСЃР»Рё СѓР¶Рµ РёРіСЂР°РµС‚
+      if (soundKey === 'benz' && this.currentSounds[soundKey] && this.currentSounds[soundKey].isPlaying) {
+        return null; // РќРµ РІРѕСЃРїСЂРѕРёР·РІРѕРґРёРј РЅРѕРІС‹Р№ Р·РІСѓРє
+      }
+      
+      // Р”Р»СЏ РґСЂСѓРіРёС… Р·РІСѓРєРѕРІ РѕСЃС‚Р°РЅР°РІР»РёРІР°РµРј РїСЂРµРґС‹РґСѓС‰РёР№ Р·РІСѓРє С‚РѕРіРѕ Р¶Рµ С‚РёРїР° РµСЃР»Рё РѕРЅ РёРіСЂР°РµС‚
+      if (soundKey !== 'benz' && this.currentSounds[soundKey] && this.currentSounds[soundKey].isPlaying) {
+        this.currentSounds[soundKey].stop();
+      }
+      
+      const finalVolume = baseVolume * this.effectsVolume;
+      const sound = scene.sound.add(soundKey, { volume: finalVolume });
+      
+      // РЎРѕС…СЂР°РЅСЏРµРј СЃСЃС‹Р»РєСѓ РЅР° Р·РІСѓРє
+      this.currentSounds[soundKey] = sound;
+      
+      // РЈРґР°Р»СЏРµРј СЃСЃС‹Р»РєСѓ РєРѕРіРґР° Р·РІСѓРє Р·Р°РєРѕРЅС‡РёС‚СЃСЏ
+      sound.once('complete', () => {
+        delete this.currentSounds[soundKey];
+      });
+      
+      sound.play();
+      return sound;
+    }
+    return null;
+  }
+  
+  static playMusic(scene, musicKey, baseVolume = 1, loop = true) {
+    if (!this.isMuted && scene.sound) {
+      // РџСЂРѕРІРµСЂСЏРµРј, РЅРµ РёРіСЂР°РµС‚ Р»Рё СѓР¶Рµ СЌС‚Р° Р¶Рµ РјСѓР·С‹РєР°
+      if (scene.currentMusic && scene.currentMusic.key === musicKey && scene.currentMusic.isPlaying) {
+        // РћР±РЅРѕРІР»СЏРµРј РіСЂРѕРјРєРѕСЃС‚СЊ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµР№ РјСѓР·С‹РєРё
+        scene.currentMusic.setVolume(baseVolume * this.musicVolume);
+        return scene.currentMusic;
+      }
+      
+      // РћСЃС‚Р°РЅР°РІР»РёРІР°РµРј Р»СЋР±СѓСЋ РїСЂРµРґС‹РґСѓС‰СѓСЋ РјСѓР·С‹РєСѓ
+      if (scene.currentMusic) {
+        scene.currentMusic.stop();
+      }
+      
+      // Р—Р°РїСѓСЃРєР°РµРј РЅРѕРІСѓСЋ РјСѓР·С‹РєСѓ
+      const finalVolume = baseVolume * this.musicVolume;
+      scene.currentMusic = scene.sound.add(musicKey, { volume: finalVolume, loop: loop });
+      scene.currentMusic.play();
+      return scene.currentMusic;
+    }
+    return null;
+  }
+  
+  static stopMusic(scene) {
+    if (scene.currentMusic) {
+      scene.currentMusic.stop();
+      scene.currentMusic = null;
+    }
+  }
+  
+  static updateMuteState(scene) {
+    if (this.isMuted) {
+      if (scene.currentMusic) {
+        scene.currentMusic.pause();
+      }
+    } else {
+      if (scene.currentMusic && scene.currentMusic.isPaused) {
+        scene.currentMusic.resume();
+      }
+    }
+  }
+  
+  static updateMusicVolume(scene, baseVolume = 1) {
+    if (scene.currentMusic && scene.currentMusic.isPlaying) {
+      scene.currentMusic.setVolume(baseVolume * this.musicVolume);
+    }
+  }
+}
+
+// РЎРёСЃС‚РµРјР° СЃРѕС…СЂР°РЅРµРЅРёСЏ РґР°РЅРЅС‹С…
+class GameData {
+  static save(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+  
+  static load(key, defaultValue = null) {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : defaultValue;
+  }
+  
+  static addDiamonds(amount) {
+    const current = this.load('diamonds', 0);
+    this.save('diamonds', current + amount);
+  }
+  
+  static getDiamonds() {
+    return this.load('diamonds', 1000); // РўРµСЃС‚РѕРІС‹Р№ Р±Р°Р»Р°РЅСЃ 1000 Р°Р»РјР°Р·РѕРІ
+  }
+  
+  static spendDiamonds(amount) {
+    const current = this.getDiamonds();
+    if (current >= amount) {
+      this.save('diamonds', current - amount);
+      return true;
+    }
+    return false;
+  }
+  
+  static saveScore(score) {
+    const scores = this.load('scores', []);
+    scores.push(Math.floor(score));
+    scores.sort((a, b) => b - a);
+    scores.splice(10); // РћСЃС‚Р°РІР»СЏРµРј С‚РѕР»СЊРєРѕ С‚РѕРї-10
+    this.save('scores', scores);
+  }
+  
+  static getTopScores() {
+    return this.load('scores', []);
+  }
+  
+  static canClaimDailyReward() {
+    const lastClaim = this.load('lastDailyReward', 0);
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000; // 24 С‡Р°СЃР° РІ РјРёР»Р»РёСЃРµРєСѓРЅРґР°С…
+    return (now - lastClaim) >= oneDay;
+  }
+  
+  static claimDailyReward() {
+    if (this.canClaimDailyReward()) {
+      this.addDiamonds(1);
+      this.save('lastDailyReward', Date.now());
+      return true;
+    }
+    return false;
+  }
+  
+  static resetDiamonds() {
+    // РџСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј С‚РµСЃС‚РѕРІС‹Р№ Р±Р°Р»Р°РЅСЃ (РґР»СЏ СЂРµС€РµРЅРёСЏ РїСЂРѕР±Р»РµРј СЃ РєРµС€РµРј)
+    this.save('diamonds', 1000);
+  }
+  
+  // РќРѕРІС‹Рµ РјРµС‚РѕРґС‹ РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ Р»РѕРєР°С†РёСЏРјРё
+  static getCurrentLocation() {
+    return this.load('currentLocation', 'locSand'); // РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РїРµСЃС‡Р°РЅР°СЏ Р»РѕРєР°С†РёСЏ
+  }
+  
+  static setCurrentLocation(location) {
+    this.save('currentLocation', location);
+  }
+  
+  static getNextLocation() {
+    const current = this.getCurrentLocation();
+    const locations = ['locSand', 'locbridge', 'loccity'];
+    const currentIndex = locations.indexOf(current);
+    
+    // Р›РѕРіРёРєР° РїРµСЂРµС…РѕРґРѕРІ: РіРѕСЂРѕРґ в†” РјРѕСЃС‚ в†” РїР»СЏР¶
+    if (current === 'locSand') {
+      return 'locbridge';
+    } else if (current === 'loccity') {
+      return 'locbridge';
+    } else { // locbridge
+      // РЎР»СѓС‡Р°Р№РЅРѕ РІС‹Р±РёСЂР°РµРј РіРѕСЂРѕРґ РёР»Рё РїР»СЏР¶
+      return Math.random() < 0.5 ? 'locSand' : 'loccity';
+    }
+  }
+  
+  static advanceLocation() {
+    const nextLocation = this.getNextLocation();
+    this.setCurrentLocation(nextLocation);
+    return nextLocation;
+  }
+}
+
+// Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ
+class MenuScene extends Phaser.Scene {
+  constructor() {
+    super('MenuScene');
+  }
+
+  preload() {
+    // Р—Р°РіСЂСѓР¶Р°РµРј С„РѕРЅ РјРµРЅСЋ Рё РїРµСЂСЃРѕРЅР°Р¶РµР№ РёР· РїР°РїРєРё Menu
+    this.load.image('bgMenu', 'Menu/BG.png');
+    this.load.image('man1', 'Menu/man1.png');
+    this.load.image('man2', 'Menu/man2.png');
+    
+    // Р—Р°РіСЂСѓР¶Р°РµРј СЃРїСЂР°Р№С‚С‹ РјРѕРЅРµС‚ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РІ РјРµРЅСЋ
+    this.load.image('coin1', 'coin1.png');
+    this.load.image('coin2', 'coin2.png');
+    
+    // Р—Р°РіСЂСѓР¶Р°РµРј РЅРѕРІС‹Рµ СЌР»РµРјРµРЅС‚С‹ РёРЅС‚РµСЂС„РµР№СЃР° РёР· РїР°РїРєРё Menu
+    this.load.image('logo', 'Menu/Logo.png');
+    this.load.image('playButton', 'Menu/Play.png');
+    this.load.image('shopButton', 'Menu/Shop.png');
+    this.load.image('actionsButton', 'Menu/Actions.png');
+    this.load.image('lbButton', 'Menu/Lb.png');
+    
+    // Р—Р°РіСЂСѓР¶Р°РµРј Р·РІСѓРєРё
+    this.load.audio('MM', 'MM.mp3');
+    this.load.audio('GM', 'GM.mp3');
+    this.load.audio('smash', 'smash.mp3');
+    this.load.audio('coin', 'coin.mp3');
+    this.load.audio('benz', 'benz.mp3');
+  }
+
+  create() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Р¤РѕРЅ РјРµРЅСЋ СЃ СЌС„С„РµРєС‚РѕРј Р±Р»СЋСЂР°
+    const bgMenu = this.add.image(gameWidth / 2, gameHeight / 2, 'bgMenu');
+    bgMenu.setDisplaySize(gameWidth, gameHeight);
+    bgMenu.setAlpha(0.85); // Р”РµР»Р°РµРј РЅРµРјРЅРѕРіРѕ РїСЂРѕР·СЂР°С‡РЅС‹Рј РґР»СЏ РјСЏРіРєРѕРіРѕ СЌС„С„РµРєС‚Р°
+
+    // РџСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ СЃР±СЂР°СЃС‹РІР°РµРј Р±Р°Р»Р°РЅСЃ РґР»СЏ СЂРµС€РµРЅРёСЏ РїСЂРѕР±Р»РµРј СЃ РєРµС€РµРј
+    GameData.resetDiamonds();
+
+    // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј СЃРѕСЃС‚РѕСЏРЅРёРµ Р·РІСѓРєР°
+    SoundManager.getMuteState();
+    
+    // Р—Р°РїСѓСЃРєР°РµРј С„РѕРЅРѕРІСѓСЋ РјСѓР·С‹РєСѓ РјРµРЅСЋ
+    SoundManager.playMusic(this, 'MM', 0.008);
+    
+    // РљРЅРѕРїРєР° СѓРїСЂР°РІР»РµРЅРёСЏ Р·РІСѓРєРѕРј РІ РїСЂР°РІРѕРј РІРµСЂС…РЅРµРј СѓРіР»Сѓ
+    this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
+
+    // Р›РѕРіРѕС‚РёРї РєРѕРјРїР°РЅРёРё
+    const logo = this.add.image(gameWidth / 2, gameHeight * 0.15, 'logo');
+    logo.setDisplaySize(gameWidth * 0.6, gameHeight * 0.12);
+
+    // РќРѕРІС‹Рµ РєРЅРѕРїРєРё РјРµРЅСЋ (РёСЃРїРѕР»СЊР·СѓРµРј РЅРѕРІС‹Рµ СЃРїСЂР°Р№С‚С‹)
+    // РљРЅРѕРїРєР° "РРіСЂР°С‚СЊ"
+    const playButton = this.add.image(gameWidth * 0.25, gameHeight * 0.42, 'playButton');
+    playButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    playButton.setInteractive();
+    
+    playButton.on('pointerdown', () => {
+      this.scene.start('MainScene');
+    });
+    
+
+
+    // РљРЅРѕРїРєР° "РњР°РіР°Р·РёРЅ"
+    const shopButton = this.add.image(gameWidth * 0.25, gameHeight * 0.54, 'shopButton');
+    shopButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    shopButton.setInteractive();
+    
+    shopButton.on('pointerdown', () => {
+      this.scene.start('ShopScene');
+    });
+    
+
+
+    // РљРЅРѕРїРєР° "РђРєС†РёРё"
+    const actionsButton = this.add.image(gameWidth * 0.25, gameHeight * 0.66, 'actionsButton');
+    actionsButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.08);
+    actionsButton.setInteractive();
+    
+    actionsButton.on('pointerdown', () => {
+      this.scene.start('PromotionsScene');
+    });
+    
+
+
+    // РљРЅРѕРїРєР° "РўР°Р±Р»РёС†Р° Р»РёРґРµСЂРѕРІ"
+    const lbButton = this.add.image(gameWidth * 0.25, gameHeight * 0.78, 'lbButton');
+    lbButton.setDisplaySize(gameWidth * 0.4, gameHeight * 0.1);
+    lbButton.setInteractive();
+    
+    lbButton.on('pointerdown', () => {
+      this.scene.start('LeaderboardScene');
+    });
+    
+
+
+    // Р”РѕР±Р°РІР»СЏРµРј РїРµСЂСЃРѕРЅР°Р¶Р° РІ РїСЂР°РІСѓСЋ С‡Р°СЃС‚СЊ СЌРєСЂР°РЅР° (РѕС‚Р·РµСЂРєР°Р»РµРЅРЅС‹Р№, РїСЂРёРїРѕРґРЅСЏС‚С‹Р№)
+    const character = this.add.image(gameWidth * 0.75, gameHeight * 0.7, 'man1');
+    character.setDisplaySize(gameWidth * 0.45, gameHeight * 0.7);
+    character.setFlipX(true); // РћС‚Р·РµСЂРєР°Р»РёРІР°РµРј РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕ
+    
+    // РђРЅРёРјР°С†РёСЏ РїРµСЂСЃРѕРЅР°Р¶Р° (РїРµСЂРµРєР»СЋС‡РµРЅРёРµ РјРµР¶РґСѓ man1 Рё man2)
+    this.time.addEvent({
+      delay: 2000,
+      callback: () => {
+        if (character.texture.key === 'man1') {
+          character.setTexture('man2');
+        } else {
+          character.setTexture('man1');
+        }
+      },
+      repeat: -1
+    });
+  }
+  
+  createSoundButton(x, y) {
+    // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј СЃРѕСЃС‚РѕСЏРЅРёРµ Р·РІСѓРєР°
+    SoundManager.getMuteState();
+    
+    // РЎРѕР·РґР°РµРј РєРЅРѕРїРєСѓ Р·РІСѓРєР°
+    const soundButton = this.add.text(x, y, SoundManager.isMuted ? 'рџ”‡' : 'рџ”Љ', {
+      font: 'bold 32px Arial',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5).setInteractive();
+    
+    soundButton.on('pointerdown', () => {
+      // РџСЂРѕСЃС‚РѕРµ РїРµСЂРµРєР»СЋС‡РµРЅРёРµ Р·РІСѓРєР° Р±РµР· СЃР»РѕР¶РЅС‹С… overlay
+      SoundManager.toggleMute();
+      soundButton.setText(SoundManager.isMuted ? 'рџ”‡' : 'рџ”Љ');
+      SoundManager.updateMuteState(this);
+      
+      // РџРѕРєР°Р·С‹РІР°РµРј СѓРІРµРґРѕРјР»РµРЅРёРµ
+      this.showSoundNotification(x, y - 60);
+    });
+    
+    soundButton.on('pointerover', () => {
+      soundButton.setScale(1.05);
+    });
+    
+    soundButton.on('pointerout', () => {
+      soundButton.setScale(1);
+    });
+  }
+  
+  showSoundNotification(x, y) {
+    // РЎРѕР·РґР°РµРј РІСЂРµРјРµРЅРЅРѕРµ СѓРІРµРґРѕРјР»РµРЅРёРµ
+    const notification = this.add.text(x, y, SoundManager.isMuted ? 'Р—Р’РЈРљ Р’Р«РљР›Р®Р§Р•Рќ' : 'Р—Р’РЈРљ Р’РљР›Р®Р§РЃРќ', {
+      font: 'bold 16px Commissioner',
+      fill: SoundManager.isMuted ? '#FF4444' : '#44FF44',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // РђРЅРёРјР°С†РёСЏ РїРѕСЏРІР»РµРЅРёСЏ Рё РёСЃС‡РµР·РЅРѕРІРµРЅРёСЏ
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: y - 30,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
+    });
+  }
+}
+
+// РњР°РіР°Р·РёРЅ
+class ShopScene extends Phaser.Scene {
+  constructor() {
+    super('ShopScene');
+  }
+
+  preload() {
+    // Р—Р°РіСЂСѓР¶Р°РµРј РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РјР°РіР°Р·РёРЅР° РёР· РїР°РїРєРё Shop
+    this.load.image('shopName', 'Shop/shopName.png');
+    this.load.image('s1', 'Shop/s1.png');
+    this.load.image('s2', 'Shop/s2.png');
+    this.load.image('s3', 'Shop/s3.png');
+    this.load.image('s4', 'Shop/s4.png');
+    this.load.image('b1', 'Shop/b1.png');
+    
+    // Р—Р°РіСЂСѓР¶Р°РµРј С„РѕРЅ РјРµРЅСЋ РґР»СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё
+    this.load.image('bgMenu', 'Menu/BG.png');
+    // Р—Р°РіСЂСѓР¶Р°РµРј СЃРїСЂР°Р№С‚С‹ РјРѕРЅРµС‚
+    this.load.image('coin1', 'coin1.png');
+    this.load.image('coin2', 'coin2.png');
+    
+    // Р—Р°РіСЂСѓР¶Р°РµРј Р·РІСѓРєРё
+    this.load.audio('MM', 'MM.mp3');
+    this.load.audio('coin', 'coin.mp3');
+  }
+
+  create() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Р¤РѕРЅ РјР°РіР°Р·РёРЅР°
+    const bgShop = this.add.image(gameWidth / 2, gameHeight / 2, 'bgMenu');
+    bgShop.setDisplaySize(gameWidth, gameHeight);
+    bgShop.setAlpha(0.7); // Р”РµР»Р°РµРј РЅРµРјРЅРѕРіРѕ РїСЂРѕР·СЂР°С‡РЅС‹Рј РґР»СЏ Р»СѓС‡С€РµР№ С‡РёС‚Р°РµРјРѕСЃС‚Рё
+
+    // Р—Р°РїСѓСЃРєР°РµРј С„РѕРЅРѕРІСѓСЋ РјСѓР·С‹РєСѓ РјРµРЅСЋ
+    SoundManager.playMusic(this, 'MM', 0.008);
+    
+    // РљРЅРѕРїРєР° СѓРїСЂР°РІР»РµРЅРёСЏ Р·РІСѓРєРѕРј РІ РїСЂР°РІРѕРј РІРµСЂС…РЅРµРј СѓРіР»Сѓ
+    this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
+
+    // Р—Р°РіРѕР»РѕРІРѕРє РјР°РіР°Р·РёРЅР° (РёСЃРїРѕР»СЊР·СѓРµРј shopName)
+    const shopNameImage = this.add.image(gameWidth / 2, gameHeight * 0.08, 'shopName');
+    shopNameImage.setDisplaySize(gameWidth * 0.6, gameHeight * 0.12);
+
+    // Р‘Р°Р»Р°РЅСЃ
+    const diamonds = GameData.getDiamonds();
+    const balanceCoinIcon = this.add.image(gameWidth / 2 - 40, gameHeight * 0.15, 'coin1');
+    balanceCoinIcon.setDisplaySize(gameWidth * 0.09, gameHeight * 0.06);
+    this.diamondsText = this.add.text(gameWidth / 2 - 10, gameHeight * 0.15, `Р‘Р°Р»Р°РЅСЃ: ${diamonds}`, {
+      font: 'bold 22px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 1
+    }).setOrigin(0, 0.5);
+
+    // РўРѕРІР°СЂС‹ (РёСЃРїРѕР»СЊР·СѓРµРј РЅРѕРІС‹Рµ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РєРЅРѕРїРѕРє)
+    const items = [
+      { name: 'РЎРєРёРґРєР° 10%', price: 15, description: 'РЎРєРёРґРєР° РЅР° РІСЃРµ РїРѕРєСѓРїРєРё', buttonImage: 's1' },
+      { name: 'РЎРєРёРґРєР° 15%', price: 25, description: 'РЈРІРµР»РёС‡РµРЅРЅР°СЏ СЃРєРёРґРєР°', buttonImage: 's2' },
+      { name: 'РЎРєРёРґРєР° 20%', price: 50, description: 'РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ СЃРєРёРґРєР°', buttonImage: 's3' },
+      { name: 'Р‘СѓРґРёР»СЊРЅРёРє', price: 15, description: 'РЎРїРµС†РёР°Р»СЊРЅС‹Р№ РїСЂРµРґРјРµС‚', buttonImage: 's4' }
+    ];
+
+    items.forEach((item, index) => {
+      const y = gameHeight * 0.25 + index * (gameHeight * 0.1);
+      this.createShopItem(gameWidth / 2, y, item);
+    });
+
+    // РљРЅРѕРїРєР° РЅР°Р·Р°Рґ (РёСЃРїРѕР»СЊР·СѓРµРј b1)
+    const backButton = this.add.image(gameWidth * 0.15, gameHeight * 0.9, 'b1');
+    backButton.setDisplaySize(gameWidth * 0.2, gameHeight * 0.08);
+    backButton.setInteractive();
+    
+    backButton.on('pointerdown', () => {
+      this.scene.start('MenuScene');
+    });
+    
+    backButton.on('pointerover', () => {
+      backButton.setScale(1.1);
+    });
+    
+    backButton.on('pointerout', () => {
+      backButton.setScale(1);
+    });
+  }
+
+  createShopButton(x, y, text, callback) {
+    // РЎРѕР·РґР°РµРј С„РѕРЅ РєРЅРѕРїРєРё СЃРѕ СЃРєСЂСѓРіР»РµРЅРёСЏРјРё
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0xFFEE00);
+    buttonBg.fillRoundedRect(x - 40, y - 15, 80, 30, 12);
+    buttonBg.lineStyle(2, 0x222222);
+    buttonBg.strokeRoundedRect(x - 40, y - 15, 80, 30, 12);
+
+    const button = this.add.text(x, y, text, {
+      font: 'bold 12px Commissioner',
+      fill: '#222222'
+    })
+      .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0x222222);
+        buttonBg.fillRoundedRect(x - 40, y - 15, 80, 30, 12);
+        buttonBg.lineStyle(2, 0xFFEE00);
+        buttonBg.strokeRoundedRect(x - 40, y - 15, 80, 30, 12);
+        button.setFill('#FFEE00');
+      })
+      .on('pointerout', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0xFFEE00);
+        buttonBg.fillRoundedRect(x - 40, y - 15, 80, 30, 12);
+        buttonBg.lineStyle(2, 0x222222);
+        buttonBg.strokeRoundedRect(x - 40, y - 15, 80, 30, 12);
+        button.setFill('#222222');
+      });
+    return button;
+  }
+
+  createBackButton(x, y, text, callback) {
+    // РЎРѕР·РґР°РµРј С„РѕРЅ РєРЅРѕРїРєРё СЃРѕ СЃРєСЂСѓРіР»РµРЅРёСЏРјРё
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0x222222);
+    buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+    buttonBg.lineStyle(2, 0xC8C8C8);
+    buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+
+    const button = this.add.text(x, y, text, {
+      font: 'bold 16px Commissioner',
+      fill: '#C8C8C8'
+    })
+      .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0xC8C8C8);
+        buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+        buttonBg.lineStyle(2, 0x222222);
+        buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+        button.setFill('#222222');
+      })
+      .on('pointerout', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0x222222);
+        buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+        buttonBg.lineStyle(2, 0xC8C8C8);
+        buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+        button.setFill('#C8C8C8');
+      });
+    return button;
+  }
+
+  createShopItem(x, y, item) {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+    
+    // РСЃРїРѕР»СЊР·СѓРµРј РёР·РѕР±СЂР°Р¶РµРЅРёРµ РєРЅРѕРїРєРё С‚РѕРІР°СЂР°
+    const itemButton = this.add.image(x, y, item.buttonImage);
+    itemButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
+    itemButton.setInteractive();
+    
+    itemButton.on('pointerdown', () => {
+      this.buyItem(item);
+    });
+    
+    itemButton.on('pointerover', () => {
+      itemButton.setScale(1.05);
+    });
+    
+    itemButton.on('pointerout', () => {
+      itemButton.setScale(1);
+    });
+  }
+
+  buyItem(item) {
+    // РџСЂРѕРІРµСЂСЏРµРј, СЏРІР»СЏРµС‚СЃСЏ Р»Рё С‚РѕРІР°СЂ СЃРєРёРґРєРѕР№
+    if (item.name.includes('РЎРєРёРґРєР°')) {
+      this.showDiscountWarning(item);
+    } else {
+      if (GameData.spendDiamonds(item.price)) {
+        // Р’РѕСЃРїСЂРѕРёР·РІРѕРґРёРј Р·РІСѓРє РїРѕРєСѓРїРєРё (РјРѕРЅРµС‚РєР°)
+        SoundManager.playSound(this, 'coin', 1.8);
+        this.showPurchaseConfirmation(item);
+        this.updateDiamondsDisplay();
+      } else {
+        this.showMessage('РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РјРѕРЅРµС‚!');
+      }
+    }
+  }
+
+  showDiscountWarning(item) {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Р—Р°С‚РµРјРЅРµРЅРёРµ
+    const overlay = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x000000, 0.7);
+
+    // РћРєРЅРѕ РїСЂРµРґСѓРїСЂРµР¶РґРµРЅРёСЏ (СѓРІРµР»РёС‡РµРЅРѕ РїРѕ РІС‹СЃРѕС‚Рµ РґР»СЏ РґРІСѓС… СЂСЏРґРѕРІ РєРЅРѕРїРѕРє)
+    const warningBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth * 0.85, gameHeight * 0.6, 0x333333);
+    warningBox.setStrokeStyle(3, 0xFFFF00);
+
+    const titleText = this.add.text(gameWidth / 2, gameHeight / 2 - gameHeight * 0.2, 'Р’РќРРњРђРќРР•!', {
+      font: 'bold 24px Arial',
+      fill: '#FFFF00',
+      stroke: '#000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+
+    const warningText = this.add.text(gameWidth / 2, gameHeight / 2 - gameHeight * 0.08, 
+      'РџРѕСЃР»Рµ РїРѕРєСѓРїРєРё РІС‹ РЅР°РїСЂР°РІР»СЏРµС‚РµСЃСЊ\nРЅР° СѓРЅРёРєР°Р»СЊРЅСѓСЋ С„РѕСЂРјСѓ Р·Р°РїРёСЃРё.\n\nРўРћР›Р¬РљРћ РџРћ РќР•Р™ Р’Р« РЎРњРћР–Р•РўР•\nРџРћР›РЈР§РРўР¬ РЎРљРР”РљРЈ!', {
+      font: 'bold 16px Arial',
+      fill: '#fff',
+      stroke: '#000',
+      strokeThickness: 1,
+      align: 'center'
+    }).setOrigin(0.5);
+
+    const continueButton = this.createButton(gameWidth / 2, gameHeight / 2 + gameHeight * 0.08, 'РџР РћР”РћР›Р–РРўР¬', {
+      font: 'bold 16px Arial',
+      fill: '#fff',
+      backgroundColor: '#00aa00',
+      stroke: '#000',
+      strokeThickness: 2
+    }, () => {
+      if (GameData.spendDiamonds(item.price)) {
+        this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
+        this.showPurchaseConfirmation(item);
+        this.updateDiamondsDisplay();
+      } else {
+        this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
+        this.showMessage('РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РјРѕРЅРµС‚!');
+      }
+    });
+
+    const cancelButton = this.createButton(gameWidth / 2, gameHeight / 2 + gameHeight * 0.16, 'РћРўРњР•РќРђ', {
+      font: 'bold 16px Arial',
+      fill: '#fff',
+      backgroundColor: '#aa0000',
+      stroke: '#000',
+      strokeThickness: 2
+    }, () => {
+      this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
+    });
+  }
+
+  destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton) {
+    overlay.destroy();
+    warningBox.destroy();
+    titleText.destroy();
+    warningText.destroy();
+    continueButton.destroy();
+    cancelButton.destroy();
+  }
+
+  showPurchaseConfirmation(item) {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Р—Р°С‚РµРјРЅРµРЅРёРµ
+    const overlay = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x000000, 0.7);
+
+    // РћРєРЅРѕ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ (СѓРІРµР»РёС‡РµРЅРѕ РїРѕ РІС‹СЃРѕС‚Рµ РґР»СЏ РґРІСѓС… СЂСЏРґРѕРІ РєРЅРѕРїРѕРє)
+    const confirmBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, 400, 320, 0x333333);
+    confirmBox.setStrokeStyle(3, 0xFFFFFF);
+
+    const titleText = this.add.text(gameWidth / 2, gameHeight / 2 - 60, 'РџРћРљРЈРџРљРђ РЎРћР’Р•Р РЁР•РќРђ!', {
+      font: 'bold 24px Arial',
+      fill: '#00ff00',
+      stroke: '#000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+
+    const itemText = this.add.text(gameWidth / 2, gameHeight / 2 - 20, `${item.name} РїСЂРёРѕР±СЂРµС‚РµРЅ!`, {
+      font: '18px Arial',
+      fill: '#fff'
+    }).setOrigin(0.5);
+
+    const questionText = this.add.text(gameWidth / 2, gameHeight / 2 + 10, 'РџРµСЂРµР№С‚Рё РЅР° СЃР°Р№С‚?', {
+      font: '16px Arial',
+      fill: '#ccc'
+    }).setOrigin(0.5);
+
+    const yesButton = this.createButton(gameWidth / 2, gameHeight / 2 + 40, 'Р”Рђ', {
+      font: 'bold 20px Arial',
+      fill: '#fff',
+      backgroundColor: '#00aa00',
+      stroke: '#000',
+      strokeThickness: 2
+    }, () => {
+      this.openLink('https://koreanaparts.ru/block/119');
+      this.destroyConfirmDialog(overlay, confirmBox, titleText, itemText, questionText, yesButton, noButton);
+    });
+
+    const noButton = this.createButton(gameWidth / 2, gameHeight / 2 + 100, 'РќР•Рў', {
+      font: 'bold 20px Arial',
+      fill: '#fff',
+      backgroundColor: '#aa0000',
+      stroke: '#000',
+      strokeThickness: 2
+    }, () => {
+      this.destroyConfirmDialog(overlay, confirmBox, titleText, itemText, questionText, yesButton, noButton);
+    });
+  }
+
+  destroyConfirmDialog(overlay, confirmBox, titleText, itemText, questionText, yesButton, noButton) {
+    overlay.destroy();
+    confirmBox.destroy();
+    titleText.destroy();
+    itemText.destroy();
+    questionText.destroy();
+    yesButton.destroy();
+    noButton.destroy();
+  }
+
+  openLink(url) {
+    // Р”Р»СЏ РјРѕР±РёР»СЊРЅС‹С… СѓСЃС‚СЂРѕР№СЃС‚РІ РёСЃРїРѕР»СЊР·СѓРµРј location.href
+    if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
+      location.href = url;
+    } else {
+      window.open(url, '_blank');
+    }
+  }
+
+  showMessage(text) {
+    const gameHeight = this.sys.game.config.height;
+    
+    // РЎРѕР·РґР°РµРј С„РѕРЅ СѓРІРµРґРѕРјР»РµРЅРёСЏ
+    const messageBg = this.add.graphics();
+    messageBg.fillStyle(0x222222, 0.9);
+    messageBg.fillRoundedRect(this.sys.game.config.width / 2 - 150, gameHeight * 0.85 - 25, 300, 50, 15);
+    messageBg.lineStyle(2, 0xFFEE00);
+    messageBg.strokeRoundedRect(this.sys.game.config.width / 2 - 150, gameHeight * 0.85 - 25, 300, 50, 15);
+    
+    const message = this.add.text(this.sys.game.config.width / 2, gameHeight * 0.85, text, {
+      font: 'bold 16px Commissioner',
+      fill: '#FFEE00',
+      align: 'center'
+    }).setOrigin(0.5);
+
+    this.time.delayedCall(2000, () => {
+      message.destroy();
+      messageBg.destroy();
+    });
+  }
+
+  updateDiamondsDisplay() {
+    const diamonds = GameData.getDiamonds();
+    this.diamondsText.setText(`Р‘Р°Р»Р°РЅСЃ: ${diamonds}`);
+    this.diamondsText.setStyle({
+      font: 'bold 22px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 1
+    });
+  }
+
+  createButton(x, y, text, style, callback) {
+    const button = this.add.text(x, y, text, style)
+      .setOrigin(0.5)
+      .setPadding(15, 10)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        button.setScale(1.1);
+      })
+      .on('pointerout', () => {
+        button.setScale(1);
+      });
+    return button;
+  }
+
+  createSoundButton(x, y) {
+    // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј СЃРѕСЃС‚РѕСЏРЅРёРµ Р·РІСѓРєР°
+    SoundManager.getMuteState();
+    
+    // РЎРѕР·РґР°РµРј РєРЅРѕРїРєСѓ Р·РІСѓРєР°
+    const soundButton = this.add.text(x, y, SoundManager.isMuted ? 'рџ”‡' : 'рџ”Љ', {
+      font: 'bold 32px Arial',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5).setInteractive();
+    
+    soundButton.on('pointerdown', () => {
+      // РџСЂРѕСЃС‚РѕРµ РїРµСЂРµРєР»СЋС‡РµРЅРёРµ Р·РІСѓРєР° Р±РµР· СЃР»РѕР¶РЅС‹С… overlay
+      SoundManager.toggleMute();
+      soundButton.setText(SoundManager.isMuted ? 'рџ”‡' : 'рџ”Љ');
+      SoundManager.updateMuteState(this);
+      
+      // РџРѕРєР°Р·С‹РІР°РµРј СѓРІРµРґРѕРјР»РµРЅРёРµ
+      this.showSoundNotification(x, y - 60);
+    });
+    
+    soundButton.on('pointerover', () => {
+      soundButton.setScale(1.05);
+    });
+    
+    soundButton.on('pointerout', () => {
+      soundButton.setScale(1);
+    });
+  }
+  
+  showSoundNotification(x, y) {
+    // РЎРѕР·РґР°РµРј РІСЂРµРјРµРЅРЅРѕРµ СѓРІРµРґРѕРјР»РµРЅРёРµ
+    const notification = this.add.text(x, y, SoundManager.isMuted ? 'Р—Р’РЈРљ Р’Р«РљР›Р®Р§Р•Рќ' : 'Р—Р’РЈРљ Р’РљР›Р®Р§РЃРќ', {
+      font: 'bold 16px Commissioner',
+      fill: SoundManager.isMuted ? '#FF4444' : '#44FF44',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // РђРЅРёРјР°С†РёСЏ РїРѕСЏРІР»РµРЅРёСЏ Рё РёСЃС‡РµР·РЅРѕРІРµРЅРёСЏ
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: y - 30,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
+    });
+  }
+}
+
+// РђРєС†РёРё
+class PromotionsScene extends Phaser.Scene {
+  constructor() {
+    super('PromotionsScene');
+  }
+
+  preload() {
+    // Р—Р°РіСЂСѓР¶Р°РµРј РёР·РѕР±СЂР°Р¶РµРЅРёСЏ Р°РєС†РёР№ РёР· РїР°РїРєРё Actions
+    this.load.image('actionName', 'Actions/actionName.png');
+    this.load.image('daily', 'Actions/daily.png');
+    this.load.image('dbl', 'Actions/dbl.png');
+    this.load.image('mem', 'Actions/mem.png');
+    this.load.image('special', 'Actions/special.png');
+    this.load.image('b2', 'Actions/b2.png');
+    
+    // Р—Р°РіСЂСѓР¶Р°РµРј С„РѕРЅ РјРµРЅСЋ РґР»СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё
+    this.load.image('bgMenu', 'Menu/BG.png');
+    
+    // Р—Р°РіСЂСѓР¶Р°РµРј Р·РІСѓРєРё
+    this.load.audio('MM', 'MM.mp3');
+    this.load.audio('coin', 'coin.mp3');
+  }
+
+  create() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Р¤РѕРЅ Р°РєС†РёР№
+    const bgPromo = this.add.image(gameWidth / 2, gameHeight / 2, 'bgMenu');
+    bgPromo.setDisplaySize(gameWidth, gameHeight);
+    bgPromo.setAlpha(0.6); // Р”РµР»Р°РµРј РЅРµРјРЅРѕРіРѕ РїСЂРѕР·СЂР°С‡РЅС‹Рј РґР»СЏ Р»СѓС‡С€РµР№ С‡РёС‚Р°РµРјРѕСЃС‚Рё
+
+    // Р—Р°РїСѓСЃРєР°РµРј С„РѕРЅРѕРІСѓСЋ РјСѓР·С‹РєСѓ РјРµРЅСЋ
+    SoundManager.playMusic(this, 'MM', 0.008);
+    
+    // РљРЅРѕРїРєР° СѓРїСЂР°РІР»РµРЅРёСЏ Р·РІСѓРєРѕРј РІ РїСЂР°РІРѕРј РІРµСЂС…РЅРµРј СѓРіР»Сѓ
+    this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
+
+    // Р—Р°РіРѕР»РѕРІРѕРє Р°РєС†РёР№ (РёСЃРїРѕР»СЊР·СѓРµРј actionName)
+    const actionNameImage = this.add.image(gameWidth / 2, gameHeight * 0.08, 'actionName');
+    actionNameImage.setDisplaySize(gameWidth * 0.6, gameHeight * 0.12);
+
+    // Р•Р¶РµРґРЅРµРІРЅР°СЏ РЅР°РіСЂР°РґР° (РёСЃРїРѕР»СЊР·СѓРµРј daily)
+    const dailyButton = this.add.image(gameWidth / 2, gameHeight * 0.25, 'daily');
+    dailyButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
+    dailyButton.setInteractive();
+    this.createDailyRewardButton(dailyButton);
+    
+    // Р”РІРѕР№РЅР°СЏ РЅР°РіСЂР°РґР° РІ РІС‹С…РѕРґРЅС‹Рµ (РёСЃРїРѕР»СЊР·СѓРµРј dbl)
+    const dblButton = this.add.image(gameWidth / 2, gameHeight * 0.38, 'dbl');
+    dblButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
+    dblButton.setInteractive();
+    
+    // РњРµРј Р·Р° Р°Р»РјР°Р· (РёСЃРїРѕР»СЊР·СѓРµРј mem)
+    const memButton = this.add.image(gameWidth / 2, gameHeight * 0.51, 'mem');
+    memButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
+    memButton.setInteractive();
+    
+    memButton.on('pointerdown', () => {
+      this.openLink('https://www.anekdot.ru/last/mem/');
+    });
+    
+    memButton.on('pointerover', () => {
+      memButton.setScale(1.05);
+    });
+    
+    memButton.on('pointerout', () => {
+      memButton.setScale(1);
+    });
+    
+    // РЎРїРµС†РёР°Р»СЊРЅС‹Рµ РїСЂРµРґР»РѕР¶РµРЅРёСЏ (РёСЃРїРѕР»СЊР·СѓРµРј special)
+    const specialButton = this.add.image(gameWidth / 2, gameHeight * 0.64, 'special');
+    specialButton.setDisplaySize(gameWidth * 0.8, gameHeight * 0.08);
+    specialButton.setInteractive();
+    
+    specialButton.on('pointerdown', () => {
+      this.openLink('https://koreanaparts.ru/specpredlozheniya-i-akcii-kompanii-koreana-sankt-peterburg');
+    });
+    
+    specialButton.on('pointerover', () => {
+      specialButton.setScale(1.05);
+    });
+    
+    specialButton.on('pointerout', () => {
+      specialButton.setScale(1);
+    });
+
+    // РљРЅРѕРїРєР° РЅР°Р·Р°Рґ (РёСЃРїРѕР»СЊР·СѓРµРј b2)
+    const backButton = this.add.image(gameWidth * 0.15, gameHeight * 0.82, 'b2');
+    backButton.setDisplaySize(gameWidth * 0.2, gameHeight * 0.08);
+    backButton.setInteractive();
+    
+    backButton.on('pointerdown', () => {
+      this.scene.start('MenuScene');
+    });
+    
+    backButton.on('pointerover', () => {
+      backButton.setScale(1.1);
+    });
+    
+    backButton.on('pointerout', () => {
+      backButton.setScale(1);
+    });
+  }
+
+  createBackButton(x, y, text, callback) {
+    // РЎРѕР·РґР°РµРј С„РѕРЅ РєРЅРѕРїРєРё СЃРѕ СЃРєСЂСѓРіР»РµРЅРёСЏРјРё
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0x222222);
+    buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+    buttonBg.lineStyle(2, 0xC8C8C8);
+    buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+
+    const button = this.add.text(x, y, text, {
+      font: 'bold 16px Commissioner',
+      fill: '#C8C8C8'
+    })
+      .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0xC8C8C8);
+        buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+        buttonBg.lineStyle(2, 0x222222);
+        buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+        button.setFill('#222222');
+      })
+      .on('pointerout', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0x222222);
+        buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+        buttonBg.lineStyle(2, 0xC8C8C8);
+        buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+        button.setFill('#C8C8C8');
+      });
+    return button;
+  }
+
+  createDailyRewardButton(button) {
+    const canClaim = GameData.canClaimDailyReward();
+    
+    if (canClaim) {
+      button.setAlpha(1.0); // РџРѕР»РЅР°СЏ СЏСЂРєРѕСЃС‚СЊ РµСЃР»Рё РґРѕСЃС‚СѓРїРЅРѕ
+      button.on('pointerdown', () => {
+        if (GameData.claimDailyReward()) {
+          SoundManager.playSound(this, 'coin', 1.8);
+          this.showMessage('РџРѕР»СѓС‡РµРЅР° 1 РјРѕРЅРµС‚Р°! Р’РѕР·РІСЂР°С‰Р°Р№С‚РµСЃСЊ Р·Р°РІС‚СЂР°!');
+          button.setAlpha(0.5); // Р”РµР»Р°РµРј С‚СѓСЃРєР»РѕР№
+          button.removeInteractive();
+        }
+      });
+      
+      button.on('pointerover', () => {
+        button.setScale(1.05);
+      });
+      
+      button.on('pointerout', () => {
+        button.setScale(1);
+      });
+    } else {
+      button.setAlpha(0.5); // РўСѓСЃРєР»Р°СЏ РµСЃР»Рё РЅРµРґРѕСЃС‚СѓРїРЅРѕ
+    }
+  }
+
+  createPromotion(x, y, text, callback) {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+    
+    const promoBg = this.add.graphics();
+    const bgColor = callback ? 0x222222 : 0xC8C8C8;
+    const strokeColor = callback ? 0xFFEE00 : 0x222222;
+    promoBg.fillStyle(bgColor, 0.2);
+    promoBg.fillRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
+    promoBg.lineStyle(2, strokeColor);
+    promoBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
+
+    const promoText = this.add.text(x, y, text, {
+      font: 'bold 14px Commissioner',
+      fill: callback ? '#FFEE00' : '#222222'
+    }).setOrigin(0.5);
+
+    if (callback) {
+      promoText.setInteractive()
+        .on('pointerdown', callback)
+        .on('pointerover', () => {
+          promoText.setScale(1.05);
+          // Р­С„С„РµРєС‚ РЅР°РІРµРґРµРЅРёСЏ - РёРЅРІРµСЂС‚РёСЂСѓРµРј С†РІРµС‚Р°
+          promoBg.clear();
+          promoBg.fillStyle(0xFFEE00, 0.2);
+          promoBg.fillRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
+          promoBg.lineStyle(2, 0x222222);
+          promoBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
+          promoText.setFill('#222222');
+        })
+        .on('pointerout', () => {
+          promoText.setScale(1);
+          // Р’РѕР·РІСЂР°С‰Р°РµРј РѕР±С‹С‡РЅС‹Рµ С†РІРµС‚Р°
+          promoBg.clear();
+          promoBg.fillStyle(0x222222, 0.2);
+          promoBg.fillRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
+          promoBg.lineStyle(2, 0xFFEE00);
+          promoBg.strokeRoundedRect(x - gameWidth * 0.38, y - gameHeight * 0.03, gameWidth * 0.76, gameHeight * 0.06, 12);
+          promoText.setFill('#FFEE00');
+        });
+    }
+  }
+
+  showMessage(text) {
+    const gameHeight = this.sys.game.config.height;
+    
+    // РЎРѕР·РґР°РµРј С„РѕРЅ СѓРІРµРґРѕРјР»РµРЅРёСЏ
+    const messageBg = this.add.graphics();
+    messageBg.fillStyle(0x222222, 0.9);
+    messageBg.fillRoundedRect(this.sys.game.config.width / 2 - 150, gameHeight * 0.85 - 25, 300, 50, 15);
+    messageBg.lineStyle(2, 0xFFEE00);
+    messageBg.strokeRoundedRect(this.sys.game.config.width / 2 - 150, gameHeight * 0.85 - 25, 300, 50, 15);
+    
+    const message = this.add.text(this.sys.game.config.width / 2, gameHeight * 0.85, text, {
+      font: 'bold 16px Commissioner',
+      fill: '#FFEE00',
+      align: 'center'
+    }).setOrigin(0.5);
+
+    this.time.delayedCall(3000, () => {
+      message.destroy();
+      messageBg.destroy();
+    });
+  }
+
+  openLink(url) {
+    // Р”Р»СЏ РјРѕР±РёР»СЊРЅС‹С… СѓСЃС‚СЂРѕР№СЃС‚РІ РёСЃРїРѕР»СЊР·СѓРµРј location.href
+    if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
+      location.href = url;
+    } else {
+      window.open(url, '_blank');
+    }
+  }
+
+  createButton(x, y, text, style, callback) {
+    const button = this.add.text(x, y, text, style)
+      .setOrigin(0.5)
+      .setPadding(15, 10)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        button.setScale(1.1);
+      })
+      .on('pointerout', () => {
+        button.setScale(1);
+      });
+    return button;
+  }
+
+  createSoundButton(x, y) {
+    // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј СЃРѕСЃС‚РѕСЏРЅРёРµ Р·РІСѓРєР°
+    SoundManager.getMuteState();
+    
+    // РЎРѕР·РґР°РµРј РєРЅРѕРїРєСѓ Р·РІСѓРєР°
+    const soundButton = this.add.text(x, y, SoundManager.isMuted ? 'рџ”‡' : 'рџ”Љ', {
+      font: 'bold 32px Arial',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5).setInteractive();
+    
+    soundButton.on('pointerdown', () => {
+      // РџСЂРѕСЃС‚РѕРµ РїРµСЂРµРєР»СЋС‡РµРЅРёРµ Р·РІСѓРєР° Р±РµР· СЃР»РѕР¶РЅС‹С… overlay
+      SoundManager.toggleMute();
+      soundButton.setText(SoundManager.isMuted ? 'рџ”‡' : 'рџ”Љ');
+      SoundManager.updateMuteState(this);
+      
+      // РџРѕРєР°Р·С‹РІР°РµРј СѓРІРµРґРѕРјР»РµРЅРёРµ
+      this.showSoundNotification(x, y - 60);
+    });
+    
+    soundButton.on('pointerover', () => {
+      soundButton.setScale(1.05);
+    });
+    
+    soundButton.on('pointerout', () => {
+      soundButton.setScale(1);
+    });
+  }
+  
+  showSoundNotification(x, y) {
+    // РЎРѕР·РґР°РµРј РІСЂРµРјРµРЅРЅРѕРµ СѓРІРµРґРѕРјР»РµРЅРёРµ
+    const notification = this.add.text(x, y, SoundManager.isMuted ? 'Р—Р’РЈРљ Р’Р«РљР›Р®Р§Р•Рќ' : 'Р—Р’РЈРљ Р’РљР›Р®Р§РЃРќ', {
+      font: 'bold 16px Commissioner',
+      fill: SoundManager.isMuted ? '#FF4444' : '#44FF44',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // РђРЅРёРјР°С†РёСЏ РїРѕСЏРІР»РµРЅРёСЏ Рё РёСЃС‡РµР·РЅРѕРІРµРЅРёСЏ
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: y - 30,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
+    });
+  }
+}
+
+// РўР°Р±Р»РёС†Р° Р»РёРґРµСЂРѕРІ
+class LeaderboardScene extends Phaser.Scene {
+  constructor() {
+    super('LeaderboardScene');
+  }
+
+  preload() {
+    // Р—Р°РіСЂСѓР¶Р°РµРј С„РѕРЅ РјРµРЅСЋ РґР»СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё
+    this.load.image('bgMenu', 'Menu/BG.png');
+    
+    // Р—Р°РіСЂСѓР¶Р°РµРј Р·РІСѓРєРё
+    this.load.audio('MM', 'MM.mp3');
+  }
+
+  create() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Р¤РѕРЅ С‚Р°Р±Р»РёС†С‹ Р»РёРґРµСЂРѕРІ
+    const bgLeader = this.add.image(gameWidth / 2, gameHeight / 2, 'bgMenu');
+    bgLeader.setDisplaySize(gameWidth, gameHeight);
+    bgLeader.setAlpha(0.6); // Р”РµР»Р°РµРј РЅРµРјРЅРѕРіРѕ РїСЂРѕР·СЂР°С‡РЅС‹Рј РґР»СЏ Р»СѓС‡С€РµР№ С‡РёС‚Р°РµРјРѕСЃС‚Рё
+
+    // Р—Р°РїСѓСЃРєР°РµРј С„РѕРЅРѕРІСѓСЋ РјСѓР·С‹РєСѓ РјРµРЅСЋ
+    SoundManager.playMusic(this, 'MM', 0.008);
+    
+    // РљРЅРѕРїРєР° СѓРїСЂР°РІР»РµРЅРёСЏ Р·РІСѓРєРѕРј РІ РїСЂР°РІРѕРј РІРµСЂС…РЅРµРј СѓРіР»Сѓ
+    this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
+
+    // Р—Р°РіРѕР»РѕРІРѕРє
+    this.add.text(gameWidth / 2, gameHeight * 0.08, 'РўРђР‘Р›РР¦Рђ Р›РР”Р•Р РћР’', {
+      font: 'bold 28px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+
+    // РџРѕР»СѓС‡Р°РµРј СЂРµРєРѕСЂРґС‹
+    const scores = GameData.getTopScores();
+
+    if (scores.length === 0) {
+      this.add.text(gameWidth / 2, gameHeight * 0.4, 'РџРѕРєР° РЅРµС‚ СЂРµРєРѕСЂРґРѕРІ', {
+        font: 'bold 20px Commissioner',
+        fill: '#C8C8C8'
+      }).setOrigin(0.5);
+    } else {
+      scores.forEach((score, index) => {
+        const y = gameHeight * 0.22 + index * (gameHeight * 0.045);
+        const medal = index < 3 ? ['рџҐ‡', 'рџҐ€', 'рџҐ‰'][index] : `${index + 1}.`;
+        
+        this.add.text(gameWidth / 2, y, `${medal} ${score} РѕС‡РєРѕРІ`, {
+          font: 'bold 16px Commissioner',
+          fill: '#FFEE00',
+          stroke: '#222222',
+          strokeThickness: 1
+        }).setOrigin(0.5);
+      });
+    }
+
+    // РљРЅРѕРїРєР° РЅР°Р·Р°Рґ
+    this.createBackButton(gameWidth * 0.15, gameHeight * 0.9, 'РќРђР—РђР”', () => {
+      this.scene.start('MenuScene');
+    });
+  }
+
+  createBackButton(x, y, text, callback) {
+    // РЎРѕР·РґР°РµРј С„РѕРЅ РєРЅРѕРїРєРё СЃРѕ СЃРєСЂСѓРіР»РµРЅРёСЏРјРё
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0x222222);
+    buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+    buttonBg.lineStyle(2, 0xC8C8C8);
+    buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+
+    const button = this.add.text(x, y, text, {
+      font: 'bold 16px Commissioner',
+      fill: '#C8C8C8'
+    })
+      .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0xC8C8C8);
+        buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+        buttonBg.lineStyle(2, 0x222222);
+        buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+        button.setFill('#222222');
+      })
+      .on('pointerout', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0x222222);
+        buttonBg.fillRoundedRect(x - 50, y - 20, 100, 40, 15);
+        buttonBg.lineStyle(2, 0xC8C8C8);
+        buttonBg.strokeRoundedRect(x - 50, y - 20, 100, 40, 15);
+        button.setFill('#C8C8C8');
+      });
+    return button;
+  }
+
+  createButton(x, y, text, style, callback) {
+    const button = this.add.text(x, y, text, style)
+      .setOrigin(0.5)
+      .setPadding(15, 10)
+      .setInteractive()
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        button.setScale(1.1);
+      })
+      .on('pointerout', () => {
+        button.setScale(1);
+      });
+    return button;
+  }
+
+  createSoundButton(x, y) {
+    // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј СЃРѕСЃС‚РѕСЏРЅРёРµ Р·РІСѓРєР°
+    SoundManager.getMuteState();
+    
+    // РЎРѕР·РґР°РµРј РєРЅРѕРїРєСѓ Р·РІСѓРєР°
+    const soundButton = this.add.text(x, y, SoundManager.isMuted ? 'рџ”‡' : 'рџ”Љ', {
+      font: 'bold 32px Arial',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5).setInteractive();
+    
+    soundButton.on('pointerdown', () => {
+      // РџСЂРѕСЃС‚РѕРµ РїРµСЂРµРєР»СЋС‡РµРЅРёРµ Р·РІСѓРєР° Р±РµР· СЃР»РѕР¶РЅС‹С… overlay
+      SoundManager.toggleMute();
+      soundButton.setText(SoundManager.isMuted ? 'рџ”‡' : 'рџ”Љ');
+      SoundManager.updateMuteState(this);
+      
+      // РџРѕРєР°Р·С‹РІР°РµРј СѓРІРµРґРѕРјР»РµРЅРёРµ
+      this.showSoundNotification(x, y - 60);
+    });
+    
+    soundButton.on('pointerover', () => {
+      soundButton.setScale(1.05);
+    });
+    
+    soundButton.on('pointerout', () => {
+      soundButton.setScale(1);
+    });
+  }
+  
+  showSoundNotification(x, y) {
+    // РЎРѕР·РґР°РµРј РІСЂРµРјРµРЅРЅРѕРµ СѓРІРµРґРѕРјР»РµРЅРёРµ
+    const notification = this.add.text(x, y, SoundManager.isMuted ? 'Р—Р’РЈРљ Р’Р«РљР›Р®Р§Р•Рќ' : 'Р—Р’РЈРљ Р’РљР›Р®Р§РЃРќ', {
+      font: 'bold 16px Commissioner',
+      fill: SoundManager.isMuted ? '#FF4444' : '#44FF44',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // РђРЅРёРјР°С†РёСЏ РїРѕСЏРІР»РµРЅРёСЏ Рё РёСЃС‡РµР·РЅРѕРІРµРЅРёСЏ
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: y - 30,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
+    });
+  }
+}
+
+// РћСЃРЅРѕРІРЅР°СЏ РёРіСЂР° (РјРѕРґРёС„РёС†РёСЂРѕРІР°РЅРЅР°СЏ СЃ РїРѕРґРґРµСЂР¶РєРѕР№ Р»РѕРєР°С†РёР№)
+class MainScene extends Phaser.Scene {
+  constructor() {
+    super('MainScene');
+    this.gameOverFlag = false;
+    this.touchStartX = 0;
+    this.touchStartY = 0;
+    this.isTouching = false;
+    this.currentLocation = 'locSand'; // РўРµРєСѓС‰Р°СЏ Р»РѕРєР°С†РёСЏ
+    this.lastLocationChangeTime = 0; // Р’СЂРµРјСЏ РїРѕСЃР»РµРґРЅРµР№ СЃРјРµРЅС‹ Р»РѕРєР°С†РёРё
+  }
+
+  preload() {
+    // РњР°С€РёРЅРєРё РёРіСЂРѕРєР°
+    this.load.image('car', 'car.png');
+    this.load.image('carL', 'carL.png');
+    this.load.image('carR', 'carR.png');
+    
+    // Р›РѕРєР°С†РёСЏ locSand (РїРµСЃС‡Р°РЅР°СЏ РїСѓСЃС‚С‹РЅСЏ)
+    this.load.image('bgsand', 'locSand/bgsand.png');
+    this.load.image('sandCar4', 'locSand/car4.png');
+    this.load.image('sandCar5', 'locSand/car5.png');
+    this.load.image('sandCar6', 'locSand/car6.png');
+    
+    // Р›РѕРєР°С†РёСЏ locbridge (РјРѕСЃС‚)
+    this.load.image('bridge', 'locbridge/bridge.png');
+    this.load.image('bridgeEc', 'locbridge/ec.png');
+    this.load.image('bridgeEc1', 'locbridge/ec1.png');
+    this.load.image('bridgeEc2', 'locbridge/ec2.png');
+    this.load.image('bridgeCar4', 'locbridge/car4.png');
+    this.load.image('bridgeCar5', 'locbridge/car5.png');
+    this.load.image('bridgeCar6', 'locbridge/car6.png');
+    
+    // Р›РѕРєР°С†РёСЏ loccity (РіРѕСЂРѕРґ)
+    this.load.image('city', 'loccity/city.png');
+    this.load.image('cityEc', 'loccity/ec.png');
+    this.load.image('cityEc1', 'loccity/ec1.png');
+    this.load.image('cityEc2', 'loccity/ec2.png');
+    
+    // Р‘РѕРЅСѓСЃС‹ Рё РјРѕРЅРµС‚С‹
+    this.load.image('bonus1', 'bonus1.png');
+    this.load.image('bonus2', 'bonus2.png');
+    this.load.image('coin1', 'coin1.png');
+    this.load.image('coin2', 'coin2.png');
+    
+    // Р¤РѕРЅ РјРµРЅСЋ
+    this.load.image('bgMenu', 'Menu/BG.png');
+    
+    // Р—Р°РіСЂСѓР¶Р°РµРј РІСЃРµ Р·РІСѓРєРё
+    this.load.audio('GM', 'GM.mp3');
+    this.load.audio('smash', 'smash.mp3');
+    this.load.audio('coin', 'coin.mp3');
+    this.load.audio('benz', 'benz.mp3');
+  }
+
+  create() {
+    this.laneCount = 3;
+    this.speed = 200;
+    this.score = 0;
+    this.nextSpeedUp = 0;
+    this.lastObstacleSpawnTime = 0;
+    this.lastDiamondSpawnTime = 0;
+    this.gameOverFlag = false;
+
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+    this.laneWidth = gameWidth / this.laneCount;
+    
+    // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј С‚РµРєСѓС‰СѓСЋ Р»РѕРєР°С†РёСЋ
+    this.currentLocation = GameData.getCurrentLocation();
+
+    // РЎРѕР·РґР°РµРј РґРѕСЂРѕРіСѓ Рё С„РѕРЅРѕРІС‹Рµ СЌР»РµРјРµРЅС‚С‹
+    this.createRoad();
+    this.createBackgroundElements();
+
+    this.player = this.physics.add.sprite(gameWidth / 2, gameHeight * 0.8, 'car');
+    this.player.setDisplaySize(gameWidth * 0.15, gameHeight * 0.08);
+    this.player.setCollideWorldBounds(true);
+    this.player.lane = 1;
+    this.player.currentDirection = 'center'; // РћС‚СЃР»РµР¶РёРІР°РµРј С‚РµРєСѓС‰РµРµ РЅР°РїСЂР°РІР»РµРЅРёРµ
+
+    this.obstacles = this.physics.add.group();
+    this.bonuses = this.physics.add.group();
+    this.extraBonuses = this.physics.add.group(); // РќРѕРІР°СЏ РіСЂСѓРїРїР° РґР»СЏ РјРѕРЅРµС‚
+
+    this.physics.add.overlap(this.player, this.obstacles, () => this.handleGameOver(), null, this);
+    this.physics.add.overlap(this.player, this.bonuses, (player, bonus) => {
+      bonus.destroy();
+      this.score += 50;
+      // Р’РѕСЃРїСЂРѕРёР·РІРѕРґРёРј Р·РІСѓРє СЃР±РѕСЂР° Р±РµРЅР·РёРЅР°
+      SoundManager.playSound(this, 'benz', 1.0);
+      this.createScoreEffect(bonus.x, bonus.y, '+50');
+    }, null, this);
+
+    // РћР±СЂР°Р±РѕС‚РєР° СЃР±РѕСЂР° РјРѕРЅРµС‚РѕРє (СЌРєСЃС‚СЂР° Р±РѕРЅСѓСЃРѕРІ)
+    this.physics.add.overlap(this.player, this.extraBonuses, (player, coin) => {
+      coin.destroy();
+      GameData.addDiamonds(1);
+      // Р’РѕСЃРїСЂРѕРёР·РІРѕРґРёРј Р·РІСѓРє СЃР±РѕСЂР° РјРѕРЅРµС‚РєРё
+      SoundManager.playSound(this, 'coin', 1.8);
+      this.createScoreEffect(coin.x, coin.y, '+1');
+      this.updateDiamondsDisplay();
+    }, null, this);
+
+    // РЈР»СѓС‡С€РµРЅРЅС‹Р№ СЃС‡РµС‚
+    this.scoreText = this.add.text(20, 20, 'РЎР§Р•Рў: 0', { 
+      font: 'bold 24px Commissioner', 
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    });
+
+    // РћС‚РѕР±СЂР°Р¶РµРЅРёРµ РјРѕРЅРµС‚ РІ РёРіСЂРµ
+    const gameCoinIcon = this.add.image(20, 75, 'coin1');
+    gameCoinIcon.setDisplaySize(gameWidth * 0.12, gameHeight * 0.07);
+    gameCoinIcon.setOrigin(0, 0.5);
+    this.diamondsText = this.add.text(70, 60, `${GameData.getDiamonds()}`, {
+      font: 'bold 20px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 1
+    });
+
+    this.input.keyboard.on('keydown-LEFT', () => this.changeLane(-1));
+    this.input.keyboard.on('keydown-RIGHT', () => this.changeLane(1));
+    
+    // РЈРїСЂР°РІР»РµРЅРёРµ СЃРІР°Р№РїР°РјРё
+    this.input.on('pointerdown', (pointer) => {
+      this.touchStartX = pointer.x;
+      this.touchStartY = pointer.y;
+      this.isTouching = true;
+    });
+    
+    this.input.on('pointerup', (pointer) => {
+      if (this.isTouching) {
+        this.handleSwipe(pointer.x, pointer.y);
+        this.isTouching = false;
+      }
+    });
+    
+    this.input.on('pointermove', (pointer) => {
+      if (this.isTouching) {
+        const deltaX = pointer.x - this.touchStartX;
+        const deltaY = pointer.y - this.touchStartY;
+        
+        if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+          if (deltaX > 0) {
+            this.changeLane(1);
+          } else {
+            this.changeLane(-1);
+          }
+          this.isTouching = false;
+        }
+      }
+    });
+
+    // РџСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ РѕСЃС‚Р°РЅР°РІР»РёРІР°РµРј РІСЃСЋ РїСЂРµРґС‹РґСѓС‰СѓСЋ РјСѓР·С‹РєСѓ
+    if (this.sound && this.sound.sounds) {
+      this.sound.sounds.forEach(sound => {
+        if (sound.isPlaying) {
+          sound.stop();
+        }
+      });
+    }
+    
+    // Р—Р°РїСѓСЃРєР°РµРј РёРіСЂРѕРІСѓСЋ РјСѓР·С‹РєСѓ
+    SoundManager.playMusic(this, 'GM', 0.175);
+    
+    // РљРЅРѕРїРєР° СѓРїСЂР°РІР»РµРЅРёСЏ Р·РІСѓРєРѕРј РІ РїСЂР°РІРѕРј РІРµСЂС…РЅРµРј СѓРіР»Сѓ
+    this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
+  }
+
+  createRoad() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+    
+    // РЎРѕР·РґР°РµРј РіСЂСѓРїРїС‹ РґР»СЏ Р°РЅРёРјРёСЂРѕРІР°РЅРЅС‹С… СЌР»РµРјРµРЅС‚РѕРІ РґРѕСЂРѕРіРё
+    this.roadElements = this.add.group();
+    
+    // РћРїСЂРµРґРµР»СЏРµРј РёР·РѕР±СЂР°Р¶РµРЅРёРµ РґР»СЏ С‚РµРєСѓС‰РµР№ Р»РѕРєР°С†РёРё
+    let roadImage;
+    switch (this.currentLocation) {
+      case 'locSand':
+        roadImage = 'bgsand';
+        break;
+      case 'locbridge':
+        roadImage = 'bridge';
+        break;
+      case 'loccity':
+        roadImage = 'city';
+        break;
+      default:
+        roadImage = 'bgsand';
+    }
+    
+    // РЎРѕР·РґР°РµРј РЅРµСЃРєРѕР»СЊРєРѕ РєРѕРїРёР№ РґРѕСЂРѕРіРё РґР»СЏ Р±РµСЃРєРѕРЅРµС‡РЅРѕР№ РїСЂРѕРєСЂСѓС‚РєРё
+    for (let i = 0; i < 3; i++) {
+      const yOffset = i * gameHeight - gameHeight;
+      
+      // Р”РѕСЂРѕРіР° СЃ РѕРєСЂСѓР¶РµРЅРёРµРј (РїРѕР»РЅР°СЏ С€РёСЂРёРЅР° СЌРєСЂР°РЅР°)
+      const road = this.add.image(gameWidth / 2, gameHeight / 2 + yOffset, roadImage);
+      road.setDisplaySize(gameWidth, gameHeight);
+      this.roadElements.add(road);
+    }
+    
+    // РќР°СЃС‚СЂРѕР№РєР° РїР°СЂР°РјРµС‚СЂРѕРІ РґР»СЏ РёРіСЂРѕРІРѕР№ Р»РѕРіРёРєРё (3 РїРѕР»РѕСЃС‹ РїРѕ РІСЃРµР№ С€РёСЂРёРЅРµ СЌРєСЂР°РЅР°)
+    const roadStart = 0;
+    const roadWidth = gameWidth;
+    const laneWidth = roadWidth / this.laneCount;
+    
+    this.laneWidth = laneWidth;
+    this.roadStart = roadStart;
+  }
+
+  createBackgroundElements() {
+    // РЈРґР°Р»СЏРµРј СЃС‚Р°СЂС‹Рµ С„РѕРЅРѕРІС‹Рµ СЌР»РµРјРµРЅС‚С‹, С‚Р°Рє РєР°Рє С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµРј СЃРїСЂР°Р№С‚С‹ РґРѕСЂРѕРіРё
+    // РќРѕРІС‹Рµ СЃРїСЂР°Р№С‚С‹ roadL, roadM, roadR СѓР¶Рµ СЃРѕРґРµСЂР¶Р°С‚ РІСЃРµ РЅРµРѕР±С…РѕРґРёРјС‹Рµ СЌР»РµРјРµРЅС‚С‹ РѕРєСЂСѓР¶РµРЅРёСЏ
+  }
+
+  createScoreEffect(x, y, text) {
+    if (text === '+1') {
+      // Р”Р»СЏ РјРѕРЅРµС‚ СЃРѕР·РґР°РµРј РёРєРѕРЅРєСѓ РІРјРµСЃС‚Рѕ С‚РµРєСЃС‚Р°
+      const coinEffect = this.add.image(x, y, 'coin1');
+      coinEffect.setDisplaySize(this.sys.game.config.width * 0.06, this.sys.game.config.height * 0.04);
+      
+      this.tweens.add({
+        targets: coinEffect,
+        y: y - 50,
+        alpha: 0,
+        duration: 1000,
+        ease: 'Power2',
+        onComplete: () => coinEffect.destroy()
+      });
+    } else {
+      const scoreText = this.add.text(x, y, text, {
+        font: 'bold 20px Arial',
+        fill: '#00ff00',
+        stroke: '#000',
+        strokeThickness: 2
+      }).setOrigin(0.5);
+      
+      this.tweens.add({
+        targets: scoreText,
+        y: y - 50,
+        alpha: 0,
+        duration: 1000,
+        ease: 'Power2',
+        onComplete: () => scoreText.destroy()
+      });
+    }
+  }
+
+  updateDiamondsDisplay() {
+    this.diamondsText.setText(`${GameData.getDiamonds()}`);
+    this.diamondsText.setStyle({
+      font: 'bold 20px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 1
+    });
+  }
+
+  update(time, delta) {
+    if (this.gameOverFlag) return;
+
+    if (time > this.nextSpeedUp) {
+      this.speed += 25;
+      this.nextSpeedUp = time + 5000;
+    }
+
+    this.score += delta * 0.01;
+    this.scoreText.setText('РЎР§Р•Рў: ' + Math.floor(this.score));
+    
+    // РџСЂРѕРІРµСЂСЏРµРј СЃРјРµРЅСѓ Р»РѕРєР°С†РёРё РєР°Р¶РґС‹Рµ 20 СЃРµРєСѓРЅРґ
+    if (time - this.lastLocationChangeTime > 20000) {
+      this.changeLocation();
+      this.lastLocationChangeTime = time;
+    }
+
+    // РЎРїР°РІРЅ РјРѕРЅРµС‚РѕРє РєР°Р¶РґС‹Рµ 25 СЃРµРєСѓРЅРґ
+    if (time - this.lastDiamondSpawnTime > 25000) {
+      const randomLane = Phaser.Math.Between(0, 2);
+      this.spawnObject('extrabonus', randomLane);
+      this.lastDiamondSpawnTime = time;
+    }
+
+    if (time - this.lastObstacleSpawnTime > 800) {
+      const lanes = Phaser.Utils.Array.Shuffle([0, 1, 2]);
+      let placedObstacles = 0;
+
+      for (let i = 0; i < lanes.length; i++) {
+        const lane = lanes[i];
+        if (placedObstacles < 2 && Phaser.Math.Between(0, 1000) < 300) {
+          this.spawnObject('obstacle', lane);
+          placedObstacles++;
+        } else if (Phaser.Math.Between(0, 1000) < 80) { // РЈРІРµР»РёС‡РµРЅРѕ РґРѕ 80 РґР»СЏ Р»СѓС‡С€РµРіРѕ Р±Р°Р»Р°РЅСЃР°
+          this.spawnObject('bonus', lane);
+        }
+      }
+      this.lastObstacleSpawnTime = time;
+    }
+
+    this.obstacles.children.iterate(child => child.y += this.speed * delta / 1000);
+    this.bonuses.children.iterate(child => child.y += this.speed * delta / 1000);
+    this.extraBonuses.children.iterate(child => child.y += this.speed * delta / 1000);
+    
+    // РђРЅРёРјР°С†РёСЏ РґРѕСЂРѕРіРё - РґРІРёР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ РІРЅРёР· РґР»СЏ СЃРѕР·РґР°РЅРёСЏ СЌС„С„РµРєС‚Р° РµР·РґС‹
+    this.roadElements.children.iterate(roadElement => {
+      roadElement.y += this.speed * delta / 1000 * 0.5; // Р”РѕСЂРѕРіР° РґРІРёР¶РµС‚СЃСЏ РјРµРґР»РµРЅРЅРµРµ РѕР±СЉРµРєС‚РѕРІ
+      
+      // Р•СЃР»Рё СЌР»РµРјРµРЅС‚ РґРѕСЂРѕРіРё СѓС€РµР» Р·Р° РЅРёР¶РЅРёР№ РєСЂР°Р№ СЌРєСЂР°РЅР°, РїРµСЂРµРјРµС‰Р°РµРј РµРіРѕ РЅР°РІРµСЂС…
+      if (roadElement.y > this.sys.game.config.height * 1.5) {
+        roadElement.y -= this.sys.game.config.height * 3;
+      }
+    });
+  }
+
+  spawnObject(type, lane) {
+    const x = this.roadStart + lane * this.laneWidth + this.laneWidth / 2;
+    const y = -60;
+    
+    if (type === 'extrabonus') {
+      // РЎРѕР·РґР°РµРј РјРѕРЅРµС‚РєСѓ СЃ Р°РЅРёРјР°С†РёРµР№ РєР°РґСЂРѕРІ
+      const coin = this.extraBonuses.create(x, y, 'coin1');
+      coin.setDisplaySize(this.sys.game.config.width * 0.1, this.sys.game.config.height * 0.08);
+      coin.setImmovable(true);
+      
+      // РђРЅРёРјР°С†РёСЏ РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ РјРµР¶РґСѓ coin1 Рё coin2
+      this.time.addEvent({
+        delay: 500,
+        callback: () => {
+          if (coin && coin.active) {
+            if (coin.texture.key === 'coin1') {
+              coin.setTexture('coin2');
+            } else {
+              coin.setTexture('coin1');
+            }
+          }
+        },
+        repeat: -1
+      });
+      
+      // Р›РµРіРєРѕРµ РјРµСЂС†Р°РЅРёРµ
+      this.tweens.add({
+        targets: coin,
+        alpha: 0.8,
+        duration: 1000,
+        yoyo: true,
+        repeat: -1
+      });
+    } else if (type === 'bonus') {
+      // РЎРѕР·РґР°РµРј Р±РѕРЅСѓСЃ СЃ Р°РЅРёРјР°С†РёРµР№ РєР°РґСЂРѕРІ
+      const sprite = this.bonuses.create(x, y, 'bonus1');
+      sprite.setDisplaySize(this.sys.game.config.width * 0.12, this.sys.game.config.height * 0.08);
+      sprite.setImmovable(true);
+      
+      // РђРЅРёРјР°С†РёСЏ РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ РјРµР¶РґСѓ bonus1 Рё bonus2
+      this.time.addEvent({
+        delay: 400,
+        callback: () => {
+          if (sprite && sprite.active) {
+            if (sprite.texture.key === 'bonus1') {
+              sprite.setTexture('bonus2');
+            } else {
+              sprite.setTexture('bonus1');
+            }
+          }
+        },
+        repeat: -1
+      });
+    } else if (type === 'obstacle') {
+      // РСЃРїРѕР»СЊР·СѓРµРј РјР°С€РёРЅРєРё РїСЂРµРїСЏС‚СЃС‚РІРёР№ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ Р»РѕРєР°С†РёРё
+      let obstacleTextures;
+      switch (this.currentLocation) {
+        case 'locSand':
+          obstacleTextures = ['sandCar4', 'sandCar5', 'sandCar6'];
+          break;
+        case 'locbridge':
+          obstacleTextures = ['bridgeEc', 'bridgeEc1', 'bridgeEc2', 'bridgeCar4', 'bridgeCar5', 'bridgeCar6'];
+          break;
+        case 'loccity':
+          obstacleTextures = ['cityEc', 'cityEc1', 'cityEc2'];
+          break;
+        default:
+          obstacleTextures = ['sandCar4', 'sandCar5', 'sandCar6'];
+      }
+      
+      const obstacleTexture = obstacleTextures[Phaser.Math.Between(0, obstacleTextures.length - 1)];
+      const sprite = this.obstacles.create(x, y, obstacleTexture);
+      sprite.setDisplaySize(this.sys.game.config.width * 0.14, this.sys.game.config.height * 0.09);
+      sprite.setImmovable(true);
+    }
+  }
+  
+  changeLocation() {
+    // РњРµРЅСЏРµРј Р»РѕРєР°С†РёСЋ
+    const newLocation = GameData.advanceLocation();
+    this.currentLocation = newLocation;
+    
+    // РџРѕРєР°Р·С‹РІР°РµРј СѓРІРµРґРѕРјР»РµРЅРёРµ Рѕ СЃРјРµРЅРµ Р»РѕРєР°С†РёРё
+    let locationName;
+    switch (newLocation) {
+      case 'locSand':
+        locationName = 'РџРЈРЎРўР«РќРЇ';
+        break;
+      case 'locbridge':
+        locationName = 'РњРћРЎРў';
+        break;
+      case 'loccity':
+        locationName = 'Р“РћР РћР”';
+        break;
+      default:
+        locationName = 'РќРћР’РђРЇ Р›РћРљРђР¦РРЇ';
+    }
+    
+    this.showLocationNotification(locationName);
+    
+    // РћР±РЅРѕРІР»СЏРµРј С„РѕРЅ РґРѕСЂРѕРіРё
+    this.updateRoadBackground();
+  }
+  
+  updateRoadBackground() {
+    // РћРїСЂРµРґРµР»СЏРµРј РЅРѕРІРѕРµ РёР·РѕР±СЂР°Р¶РµРЅРёРµ РґР»СЏ Р»РѕРєР°С†РёРё
+    let roadImage;
+    switch (this.currentLocation) {
+      case 'locSand':
+        roadImage = 'bgsand';
+        break;
+      case 'locbridge':
+        roadImage = 'bridge';
+        break;
+      case 'loccity':
+        roadImage = 'city';
+        break;
+      default:
+        roadImage = 'bgsand';
+    }
+    
+    // РћР±РЅРѕРІР»СЏРµРј РІСЃРµ СЌР»РµРјРµРЅС‚С‹ РґРѕСЂРѕРіРё
+    this.roadElements.children.iterate(roadElement => {
+      roadElement.setTexture(roadImage);
+    });
+  }
+  
+  showLocationNotification(locationName) {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+    
+    // РЎРѕР·РґР°РµРј СѓРІРµРґРѕРјР»РµРЅРёРµ Рѕ СЃРјРµРЅРµ Р»РѕРєР°С†РёРё
+    const notification = this.add.text(gameWidth / 2, gameHeight / 2, `РќРћР’РђРЇ Р›РћРљРђР¦РРЇ:\n${locationName}`, {
+      font: 'bold 32px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 3,
+      align: 'center'
+    }).setOrigin(0.5);
+    
+    // РђРЅРёРјР°С†РёСЏ РїРѕСЏРІР»РµРЅРёСЏ Рё РёСЃС‡РµР·РЅРѕРІРµРЅРёСЏ
+    this.tweens.add({
+      targets: notification,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 500,
+      yoyo: true,
+      ease: 'Back.easeOut'
+    });
+    
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      duration: 3000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
+    });
+  }
+
+  changeLane(dir) {
+    if (this.gameOverFlag) return;
+    
+    const newLane = Phaser.Math.Clamp(this.player.lane + dir, 0, this.laneCount - 1);
+    if (newLane !== this.player.lane) {
+      this.player.lane = newLane;
+      
+      // РњРµРЅСЏРµРј СЃРїСЂР°Р№С‚ Рё Р°РЅРёРјРёСЂСѓРµРј С‚РµРЅСЊ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ РЅР°РїСЂР°РІР»РµРЅРёСЏ РїРѕРІРѕСЂРѕС‚Р°
+      if (dir > 0) {
+        this.player.setTexture('carR');
+        this.player.currentDirection = 'right';
+        this.tweens.add({
+            targets: this.playerShadow,
+            scaleX: 1.1,
+            angle: 15,
+            duration: 150,
+            yoyo: true,
+            ease: 'Sine.easeInOut'
+        });
+      } else {
+        this.player.setTexture('carL');
+        this.player.currentDirection = 'left';
+        this.tweens.add({
+            targets: this.playerShadow,
+            scaleX: 1.1,
+            angle: -15,
+            duration: 150,
+            yoyo: true,
+            ease: 'Sine.easeInOut'
+        });
+      }
+      
+      // Р’РѕР·РІСЂР°С‰Р°РµРј РѕР±С‹С‡РЅС‹Р№ СЃРїСЂР°Р№С‚ С‡РµСЂРµР· РєРѕСЂРѕС‚РєРѕРµ РІСЂРµРјСЏ
+      this.time.delayedCall(300, () => {
+        if (this.player && !this.gameOverFlag) {
+          this.player.setTexture('car');
+          this.player.currentDirection = 'center';
+        }
+      });
+      
+      this.player.x = this.roadStart + this.player.lane * this.laneWidth + this.laneWidth / 2;
+    }
+  }
+
+  handleGameOver() {
+    if (this.gameOverFlag) return;
+    this.gameOverFlag = true;
+
+    // Р’РѕСЃРїСЂРѕРёР·РІРѕРґРёРј Р·РІСѓРє СЃС‚РѕР»РєРЅРѕРІРµРЅРёСЏ
+    SoundManager.playSound(this, 'smash', 0.7);
+    
+    // РћСЃС‚Р°РЅР°РІР»РёРІР°РµРј РёРіСЂРѕРІСѓСЋ РјСѓР·С‹РєСѓ
+    SoundManager.stopMusic(this);
+
+    // РЎРѕС…СЂР°РЅСЏРµРј СЃС‡РµС‚
+    GameData.saveScore(this.score);
+
+    this.physics.pause();
+    this.player.setTint(0xff0000);
+
+    // Р­РєСЂР°РЅ РѕРєРѕРЅС‡Р°РЅРёСЏ РёРіСЂС‹
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+    
+    // Р—Р°С‚РµРјРЅРµРЅРёРµ С„РѕРЅР°
+    const overlay = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x000000, 0.8);
+    
+    // РћСЃРЅРѕРІРЅРѕРµ РѕРєРЅРѕ РґРёР°Р»РѕРіР°
+    const dialogBg = this.add.graphics();
+    dialogBg.fillStyle(0x222222, 0.95);
+    dialogBg.fillRoundedRect(gameWidth / 2 - 200, gameHeight / 2 - 150, 400, 300, 15);
+    dialogBg.lineStyle(3, 0xFFEE00);
+    dialogBg.strokeRoundedRect(gameWidth / 2 - 200, gameHeight / 2 - 150, 400, 300, 15);
+    
+    // Р—Р°РіРѕР»РѕРІРѕРє
+    this.add.text(gameWidth / 2, gameHeight / 2 - 80, 'РР“Р Рђ РћРљРћРќР§Р•РќРђ', { 
+      font: 'bold 28px Commissioner', 
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // РЎС‡РµС‚ СЃ Р°РЅРёРјР°С†РёРµР№ РїСЂРѕРєСЂСѓС‚РєРё
+    this.finalScoreText = this.add.text(gameWidth / 2, gameHeight / 2 - 40, 'РС‚РѕРіРѕРІС‹Р№ СЃС‡РµС‚: 0', { 
+      font: 'bold 20px Commissioner', 
+      fill: '#C8C8C8',
+      stroke: '#222222',
+      strokeThickness: 1
+    }).setOrigin(0.5);
+    
+    // РђРЅРёРјР°С†РёСЏ РїСЂРѕРєСЂСѓС‚РєРё СЃС‡РµС‚Р° РѕС‚ 0 РґРѕ С„РёРЅР°Р»СЊРЅРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ
+    const finalScore = Math.floor(this.score);
+    const scoreCounter = { value: 0 };
+    
+    this.tweens.add({
+      targets: scoreCounter,
+      value: finalScore,
+      duration: 2000, // 2 СЃРµРєСѓРЅРґС‹ Р°РЅРёРјР°С†РёРё
+      ease: 'Power2',
+      onUpdate: () => {
+        this.finalScoreText.setText('РС‚РѕРіРѕРІС‹Р№ СЃС‡РµС‚: ' + Math.floor(scoreCounter.value));
+        // Р”РѕР±Р°РІР»СЏРµРј СЌС„С„РµРєС‚ РјРµСЂС†Р°РЅРёСЏ РІРѕ РІСЂРµРјСЏ РїРѕРґСЃС‡РµС‚Р°
+        if (scoreCounter.value < finalScore) {
+          this.finalScoreText.setFill('#FFEE00');
+        } else {
+          this.finalScoreText.setFill('#C8C8C8');
+        }
+      },
+      onComplete: () => {
+        // Р¤РёРЅР°Р»СЊРЅС‹Р№ СЌС„С„РµРєС‚ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё РїРѕРґСЃС‡РµС‚Р°
+        this.tweens.add({
+          targets: this.finalScoreText,
+          scaleX: 1.2,
+          scaleY: 1.2,
+          duration: 200,
+          yoyo: true,
+          ease: 'Back.easeOut'
+        });
+      }
+    });
+    
+    // РљРЅРѕРїРєР° "РќР°С‡Р°С‚СЊ Р·Р°РЅРѕРІРѕ"
+    this.createGameOverButton(gameWidth / 2, gameHeight / 2 + 10, 'РќРђР§РђРўР¬ Р—РђРќРћР’Рћ', () => {
+      this.scene.restart();
+    });
+
+    // РљРЅРѕРїРєР° "РњРµРЅСЋ"
+    this.createGameOverButton(gameWidth / 2, gameHeight / 2 + 70, 'РњР•РќР®', () => {
+      this.scene.start('MenuScene');
+    });
+  }
+
+  createGameOverButton(x, y, text, callback) {
+    // РЎРѕР·РґР°РµРј С„РѕРЅ РєРЅРѕРїРєРё СЃРѕ СЃРєСЂСѓРіР»РµРЅРёСЏРјРё РІ РєРѕСЂРїРѕСЂР°С‚РёРІРЅРѕРј СЃС‚РёР»Рµ
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0xFFEE00);
+    buttonBg.fillRoundedRect(x - 120, y - 25, 240, 50, 15);
+    buttonBg.lineStyle(3, 0x222222);
+    buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
+
+    // РќРµРІРёРґРёРјР°СЏ РѕР±Р»Р°СЃС‚СЊ РґР»СЏ РєР»РёРєР° (Р±РѕР»СЊС€Рµ РѕСЃРЅРѕРІРЅРѕР№ РєРЅРѕРїРєРё)
+    const clickArea = this.add.rectangle(x, y, 260, 70, 0x000000, 0);
+    clickArea.setInteractive();
+
+    const button = this.add.text(x, y, text, {
+      font: 'bold 20px Commissioner',
+      fill: '#222222'
+    }).setOrigin(0.5);
+
+    clickArea
+      .on('pointerdown', callback)
+      .on('pointerover', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0x222222);
+        buttonBg.fillRoundedRect(x - 120, y - 25, 240, 50, 15);
+        buttonBg.lineStyle(3, 0xFFEE00);
+        buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
+        button.setFill('#FFEE00');
+        button.setScale(1.05);
+      })
+      .on('pointerout', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0xFFEE00);
+        buttonBg.fillRoundedRect(x - 120, y - 25, 240, 50, 15);
+        buttonBg.lineStyle(3, 0x222222);
+        buttonBg.strokeRoundedRect(x - 120, y - 25, 240, 50, 15);
+        button.setFill('#222222');
+        button.setScale(1);
+      });
+    return button;
+  }
+
+  handleSwipe(endX, endY) {
+    const deltaX = endX - this.touchStartX;
+    const deltaY = endY - this.touchStartY;
+    
+    const minSwipeDistance = 30;
+    
+    if (Math.abs(deltaX) > minSwipeDistance) {
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        if (deltaX > 0) {
+          this.changeLane(1);
+        } else {
+          this.changeLane(-1);
+        }
+      }
+    } else {
+      const screenWidth = this.sys.game.config.width;
+      if (endX < screenWidth / 2) {
+        this.changeLane(-1);
+      } else {
+        this.changeLane(1);
+      }
+    }
+  }
+
+  createSoundButton(x, y) {
+    // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј СЃРѕСЃС‚РѕСЏРЅРёРµ Р·РІСѓРєР°
+    SoundManager.getMuteState();
+    
+    // РЎРѕР·РґР°РµРј РєРЅРѕРїРєСѓ Р·РІСѓРєР°
+    const soundButton = this.add.text(x, y, SoundManager.isMuted ? 'рџ”‡' : 'рџ”Љ', {
+      font: 'bold 32px Arial',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5).setInteractive();
+    
+    soundButton.on('pointerdown', () => {
+      // РџСЂРѕСЃС‚РѕРµ РїРµСЂРµРєР»СЋС‡РµРЅРёРµ Р·РІСѓРєР° Р±РµР· СЃР»РѕР¶РЅС‹С… overlay
+      SoundManager.toggleMute();
+      soundButton.setText(SoundManager.isMuted ? 'рџ”‡' : 'рџ”Љ');
+      SoundManager.updateMuteState(this);
+      
+      // РџРѕРєР°Р·С‹РІР°РµРј СѓРІРµРґРѕРјР»РµРЅРёРµ
+      this.showSoundNotification(x, y - 60);
+    });
+    
+    soundButton.on('pointerover', () => {
+      soundButton.setScale(1.05);
+    });
+    
+    soundButton.on('pointerout', () => {
+      soundButton.setScale(1);
+    });
+  }
+  
+  showSoundNotification(x, y) {
+    // РЎРѕР·РґР°РµРј РІСЂРµРјРµРЅРЅРѕРµ СѓРІРµРґРѕРјР»РµРЅРёРµ
+    const notification = this.add.text(x, y, SoundManager.isMuted ? 'Р—Р’РЈРљ Р’Р«РљР›Р®Р§Р•Рќ' : 'Р—Р’РЈРљ Р’РљР›Р®Р§РЃРќ', {
+      font: 'bold 16px Commissioner',
+      fill: SoundManager.isMuted ? '#FF4444' : '#44FF44',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // РђРЅРёРјР°С†РёСЏ РїРѕСЏРІР»РµРЅРёСЏ Рё РёСЃС‡РµР·РЅРѕРІРµРЅРёСЏ
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: y - 30,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
+    });
+  }
+}
+
+const config = {
+  type: Phaser.AUTO,
+  width: window.innerWidth,
+  height: window.innerHeight,
+  physics: { default: 'arcade' },
+  scene: [MenuScene, ShopScene, PromotionsScene, LeaderboardScene, MainScene]
+};
+
+const game = new Phaser.Game(config);
+
+window.addEventListener('resize', () => {
+  game.scale.resize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
+
