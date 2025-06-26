@@ -227,6 +227,281 @@ class GameData {
     this.setCurrentLocation(nextLocation);
     return nextLocation;
   }
+  
+  // Методы для управления покупками с лимитами
+  static hasPurchasedOnce(itemKey) {
+    const purchases = this.load('oncePurchases', {});
+    return purchases[itemKey] === true;
+  }
+  
+  static markAsPurchasedOnce(itemKey) {
+    const purchases = this.load('oncePurchases', {});
+    purchases[itemKey] = true;
+    this.save('oncePurchases', purchases);
+  }
+
+  static getPurchaseCount(itemKey) {
+    const purchases = this.load('purchaseCounts', {});
+    return purchases[itemKey] || 0;
+  }
+
+  static incrementPurchaseCount(itemKey) {
+    const purchases = this.load('purchaseCounts', {});
+    purchases[itemKey] = (purchases[itemKey] || 0) + 1;
+    this.save('purchaseCounts', purchases);
+  }
+
+  static canPurchaseMore(itemKey, maxPurchases) {
+    return this.getPurchaseCount(itemKey) < maxPurchases;
+  }
+}
+
+// Условия игры
+class ConditionsScene extends Phaser.Scene {
+  constructor() {
+    super('ConditionsScene');
+  }
+
+  preload() {
+    // Загружаем фон меню и кнопку назад
+    this.load.image('bgMenu', 'Menu/BG.png');
+    this.load.image('b2', 'Actions/b2.png');
+    
+    // Загружаем звуки
+    this.load.audio('MM', 'MM.mp3');
+  }
+
+  create() {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Фон условий
+    const bgConditions = this.add.image(gameWidth / 2, gameHeight / 2, 'bgMenu');
+    bgConditions.setDisplaySize(gameWidth, gameHeight);
+    bgConditions.setAlpha(0.6);
+
+    // Запускаем фоновую музыку меню
+    SoundManager.playMusic(this, 'MM', 0.008);
+    
+    // Кнопка управления звуком в правом верхнем углу
+    this.createSoundButton(gameWidth * 0.9, gameHeight * 0.1);
+
+    // Заголовок
+    this.add.text(gameWidth / 2, gameHeight * 0.08, 'УСЛОВИЯ ИГРЫ', {
+      font: 'bold 28px Commissioner',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+
+    // Создаем прокручиваемую область для текста
+    const textAreaHeight = gameHeight * 0.7;
+    const textAreaY = gameHeight * 0.15;
+    
+    // Маска для ограничения видимой области
+    const maskShape = this.add.rectangle(gameWidth / 2, gameHeight * 0.5, gameWidth * 0.9, textAreaHeight, 0x000000);
+    maskShape.setVisible(false);
+    
+    // Основной текст с правилами (корпоративный стиль)
+    const conditionsText = `ОФИЦИАЛЬНЫЕ ПРАВИЛА АКЦИИ "YELLOW CAR CHALLENGE"
+
+🏢 KOREANA PARTS представляет игровую акцию с реальными призами!
+
+📋 ПРАВИЛА УЧАСТИЯ:
+• Управляйте автомобилем с помощью свайпов или клавиш
+• Избегайте столкновений с препятствиями на дороге
+• Собирайте канистры топлива для увеличения счета
+• Собирайте игровые монеты для приобретения призов
+
+🎯 СИСТЕМА НАЧИСЛЕНИЯ ОЧКОВ:
+• Базовые очки начисляются за время в игре
+• Множитель x1.2 активируется при достижении 2000 очков
+• Множитель x1.55 активируется при достижении 4000 очков
+• За каждую канистру топлива: +50 очков (с учетом множителя)
+• За каждую игровую монету: +1 монета в магазине
+
+🗺️ ИГРОВЫЕ ЛОКАЦИИ:
+Игра проходит в трех уникальных локациях:
+• Песчаная пустыня - основная локация с умеренной сложностью
+• Городские улицы - повышенная концентрация препятствий
+• Мост через реку - особые условия прохождения
+
+🎮 УРОВНИ СЛОЖНОСТИ:
+• Скорость игры постепенно увеличивается
+• Частота появления препятствий возрастает со временем
+• Динамическая система сложности адаптируется под прогресс
+
+🛒 МАГАЗИН ПРИЗОВ:
+• Скидки на автозапчасти от 5% до 25%
+• Скидки на услуги СТО до 50%
+• Бонусные предложения и специальные акции
+• Некоторые предложения имеют лимиты покупок
+
+🏆 ГЛАВНЫЕ ПРИЗЫ ЗА ЛИДЕРСТВО:
+По итогам акции будут определены 3 лучших игрока по количеству очков:
+
+🥇 1-е место: iPhone 16 Pro Max
+Самый продвинутый смартфон для победителя!
+
+🥈 2-е место: Эксклюзивный будильник KOREANA
+Стильный брендированный аксессуар от компании
+
+🥉 3-е место: Фирменная футболка KOREANA
+Качественная одежда с логотипом компании
+
+Результаты будут подведены 31 июля в 23:59.
+Победители будут уведомлены через администрацию магазина.
+
+⚖️ ПРАВОВАЯ ИНФОРМАЦИЯ:
+• Акция проводится с 1 июля по 31 июля 2024 года включительно
+• Организатор: ООО "KOREANA PARTS"
+• Призы предоставляются при предъявлении купона
+• Условия акции могут быть изменены организатором
+• Подробности у менеджеров компании
+
+📞 ТЕХНИЧЕСКАЯ ПОДДЕРЖКА:
+При возникновении вопросов обращайтесь к администрации магазина.
+
+Удачи в игре! 🏆`;
+
+    // Создаем контейнер для текста
+    this.textContainer = this.add.container(gameWidth / 2, textAreaY);
+    
+    const textObject = this.add.text(0, 0, conditionsText, {
+      font: '13px Commissioner',
+      fill: '#FFFFFF',
+      stroke: '#222222',
+      strokeThickness: 1,
+      align: 'left',
+      wordWrap: { width: gameWidth * 0.85 },
+      lineSpacing: 8
+    }).setOrigin(0.5, 0);
+    
+    this.textContainer.add(textObject);
+    
+    // Применяем маску
+    this.textContainer.setMask(maskShape.createGeometryMask());
+    
+    // Переменные для скролла
+    this.scrollY = 0;
+    this.maxScroll = Math.max(0, textObject.height - textAreaHeight + 50);
+    
+    // Добавляем обработчики для скролла
+    this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+      this.scrollY += deltaY * 0.5;
+      this.scrollY = Phaser.Math.Clamp(this.scrollY, 0, this.maxScroll);
+      this.textContainer.y = textAreaY - this.scrollY;
+    });
+    
+    // Обработчики для сенсорного скролла
+    this.input.on('pointerdown', (pointer) => {
+      this.lastPointerY = pointer.y;
+      this.isDragging = false;
+    });
+    
+    this.input.on('pointermove', (pointer) => {
+      if (this.input.activePointer.isDown) {
+        const deltaY = this.lastPointerY - pointer.y;
+        if (Math.abs(deltaY) > 5) {
+          this.isDragging = true;
+          this.scrollY += deltaY;
+          this.scrollY = Phaser.Math.Clamp(this.scrollY, 0, this.maxScroll);
+          this.textContainer.y = textAreaY - this.scrollY;
+          this.lastPointerY = pointer.y;
+        }
+      }
+    });
+
+    // Кнопка назад
+    const backButton = this.add.image(gameWidth * 0.15, gameHeight * 0.9, 'b2');
+    backButton.setDisplaySize(gameWidth * 0.25, gameHeight * 0.08);
+    backButton.setInteractive();
+    
+    backButton.on('pointerdown', () => {
+      if (!this.isDragging) {
+        this.scene.start('MenuScene');
+      }
+    })
+    .on('pointerover', () => {
+      backButton.setTint(0xcccccc);
+      backButton.setAlpha(0.9);
+    })
+    .on('pointerout', () => {
+      backButton.clearTint();
+      backButton.setAlpha(1);
+    });
+
+    // Добавляем индикатор возможности прокрутки
+    if (this.maxScroll > 0) {
+      this.add.text(gameWidth / 2, gameHeight * 0.85, '↕ Прокрутите для просмотра полного текста', {
+        font: '12px Commissioner',
+        fill: '#FFEE00',
+        stroke: '#222222',
+        strokeThickness: 1
+      }).setOrigin(0.5);
+    }
+  }
+
+  destroy() {
+    // Очищаем обработчики скролла при уничтожении сцены
+    if (this.input) {
+      this.input.off('wheel');
+      this.input.off('pointerdown');
+      this.input.off('pointermove');
+    }
+    super.destroy();
+  }
+
+  createSoundButton(x, y) {
+    // Инициализируем состояние звука
+    SoundManager.getMuteState();
+    
+    // Создаем кнопку звука
+    const soundButton = this.add.text(x, y, SoundManager.isMuted ? '🔇' : '🔊', {
+      font: 'bold 32px Arial',
+      fill: '#FFEE00',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5).setInteractive();
+    
+    soundButton.on('pointerdown', () => {
+      // Простое переключение звука без сложных overlay
+      SoundManager.toggleMute();
+      soundButton.setText(SoundManager.isMuted ? '🔇' : '🔊');
+      SoundManager.updateMuteState(this);
+      
+      // Показываем уведомление
+      this.showSoundNotification(x, y - 60);
+    })
+    .on('pointerover', () => {
+      soundButton.setScale(1.1);
+    })
+    .on('pointerout', () => {
+      soundButton.setScale(1);
+    });
+  }
+  
+  showSoundNotification(x, y) {
+    // Создаем временное уведомление
+    const notification = this.add.text(x, y, SoundManager.isMuted ? 'ЗВУК ВЫКЛЮЧЕН' : 'ЗВУК ВКЛЮЧЁН', {
+      font: 'bold 16px Commissioner',
+      fill: SoundManager.isMuted ? '#FF4444' : '#44FF44',
+      stroke: '#222222',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    
+    // Анимация появления и исчезновения
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: y - 30,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        notification.destroy();
+      }
+    });
+  }
 }
 
 // Главное меню
@@ -359,11 +634,9 @@ class MenuScene extends Phaser.Scene {
       lbButton.clearTint();
       lbButton.setAlpha(1);
     });
-    
-
 
     // Добавляем персонажа в центр нижней части экрана, касающимся низа
-    const character = this.add.image(gameWidth / 2, gameHeight * 0.8, 'man1');
+    const character = this.add.image(gameWidth / 2, gameHeight * 0.78, 'man1');
     character.setDisplaySize(gameWidth * 0.45, gameHeight * 0.52);
     character.setFlipX(false); // Убираем отзеркаливание
     
@@ -378,6 +651,69 @@ class MenuScene extends Phaser.Scene {
         }
       },
       repeat: -1
+    });
+
+    // Иконка условий в правом нижнем углу
+    this.createConditionsIcon(gameWidth * 0.9, gameHeight * 0.9);
+  }
+
+  createConditionsIcon(x, y) {
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    // Создаем иконку белого листа программно
+    const iconSize = Math.min(gameWidth * 0.08, gameHeight * 0.08);
+    
+    // Фон иконки
+    const iconBg = this.add.graphics();
+    iconBg.fillStyle(0x222222, 0.9);
+    iconBg.fillRoundedRect(x - iconSize/2, y - iconSize/2, iconSize, iconSize, 8);
+    iconBg.lineStyle(2, 0xFFEE00);
+    iconBg.strokeRoundedRect(x - iconSize/2, y - iconSize/2, iconSize, iconSize, 8);
+
+    // Рисуем простую иконку белого листа
+    const docIcon = this.add.graphics();
+    docIcon.fillStyle(0xFFFFFF); // Белый цвет
+    // Основной лист бумаги
+    docIcon.fillRoundedRect(x - iconSize * 0.2, y - iconSize * 0.25, iconSize * 0.4, iconSize * 0.5, 3);
+    
+    // Рамка листа
+    docIcon.lineStyle(1, 0x222222);
+    docIcon.strokeRoundedRect(x - iconSize * 0.2, y - iconSize * 0.25, iconSize * 0.4, iconSize * 0.5, 3);
+    
+    // Простые линии текста на листе
+    docIcon.lineStyle(1, 0x666666);
+    docIcon.strokeRect(x - iconSize * 0.15, y - iconSize * 0.15, iconSize * 0.25, 1);
+    docIcon.strokeRect(x - iconSize * 0.15, y - iconSize * 0.08, iconSize * 0.2, 1);
+    docIcon.strokeRect(x - iconSize * 0.15, y - iconSize * 0.01, iconSize * 0.3, 1);
+    docIcon.strokeRect(x - iconSize * 0.15, y + iconSize * 0.06, iconSize * 0.22, 1);
+
+    // Невидимая область для клика
+    const clickArea = this.add.circle(x, y, iconSize * 0.6, 0x000000, 0);
+    clickArea.setInteractive();
+
+    clickArea.on('pointerdown', () => {
+      this.scene.start('ConditionsScene');
+    })
+    .on('pointerover', () => {
+      // Эффект свечения вместо скейлинга
+      iconBg.clear();
+      iconBg.fillStyle(0x444444, 0.9);
+      iconBg.fillRoundedRect(x - iconSize/2, y - iconSize/2, iconSize, iconSize, 8);
+      iconBg.lineStyle(3, 0xFFFFFF);
+      iconBg.strokeRoundedRect(x - iconSize/2, y - iconSize/2, iconSize, iconSize, 8);
+      
+      docIcon.setAlpha(0.9);
+    })
+    .on('pointerout', () => {
+      // Возвращаем исходный вид
+      iconBg.clear();
+      iconBg.fillStyle(0x222222, 0.9);
+      iconBg.fillRoundedRect(x - iconSize/2, y - iconSize/2, iconSize, iconSize, 8);
+      iconBg.lineStyle(2, 0xFFEE00);
+      iconBg.strokeRoundedRect(x - iconSize/2, y - iconSize/2, iconSize, iconSize, 8);
+      
+      docIcon.setAlpha(1);
     });
   }
   
@@ -437,15 +773,13 @@ class MenuScene extends Phaser.Scene {
 class ShopScene extends Phaser.Scene {
   constructor() {
     super('ShopScene');
+    this.currentTab = 'parts'; // 'parts' или 'service'
+    this.itemsGroup = null;
   }
 
   preload() {
     // Загружаем изображения магазина из папки Shop
     this.load.image('shopName', 'Shop/shopName.png');
-    this.load.image('s1', 'Shop/s1.png');
-    this.load.image('s2', 'Shop/s2.png');
-    this.load.image('s3', 'Shop/s3.png');
-    this.load.image('s4', 'Shop/s4.png');
     this.load.image('b1', 'Shop/b1.png');
     
     // Загружаем фон меню для совместимости
@@ -478,18 +812,14 @@ class ShopScene extends Phaser.Scene {
     const shopNameImage = this.add.image(gameWidth / 2, gameHeight * 0.12, 'shopName');
     shopNameImage.setDisplaySize(gameWidth * 0.7, gameHeight * 0.1);
 
-    // Товары (используем новые изображения кнопок)
-    const items = [
-      { name: 'Скидка 10%', price: 15, description: 'Скидка на все покупки', buttonImage: 's1' },
-      { name: 'Скидка 15%', price: 25, description: 'Увеличенная скидка', buttonImage: 's2' },
-      { name: 'Скидка 20%', price: 50, description: 'Максимальная скидка', buttonImage: 's3' },
-      { name: 'Будильник', price: 15, description: 'Специальный предмет', buttonImage: 's4' }
-    ];
+    // Создаем переключатели вкладок
+    this.createTabButtons(gameWidth, gameHeight);
 
-    items.forEach((item, index) => {
-      const y = gameHeight * 0.28 + index * (gameHeight * 0.14);
-      this.createShopItem(gameWidth / 2, y, item);
-    });
+    // Создаем группу для товаров
+    this.itemsGroup = this.add.group();
+
+    // Отображаем товары для текущей вкладки
+    this.displayItems();
 
     // Отображение монет в правом нижнем углу на уровне кнопки НАЗАД
     const coinIcon = this.add.image(gameWidth * 0.6, gameHeight * 0.9, 'coin1');
@@ -534,6 +864,106 @@ class ShopScene extends Phaser.Scene {
     .on('pointerout', () => {
       backButton.clearTint();
       backButton.setAlpha(1);
+    });
+  }
+
+  createTabButtons(gameWidth, gameHeight) {
+    // Кнопка "Запчасти"
+    this.partsTabBg = this.add.graphics();
+    this.partsTabButton = this.add.text(gameWidth * 0.3, gameHeight * 0.22, 'ЗАПЧАСТИ', {
+      font: 'bold 18px Commissioner',
+      fill: this.currentTab === 'parts' ? '#222222' : '#FFEE00'
+    }).setOrigin(0.5).setInteractive();
+
+    // Кнопка "СТО"
+    this.serviceTabBg = this.add.graphics();
+    this.serviceTabButton = this.add.text(gameWidth * 0.7, gameHeight * 0.22, 'СТО', {
+      font: 'bold 18px Commissioner',
+      fill: this.currentTab === 'service' ? '#222222' : '#FFEE00'
+    }).setOrigin(0.5).setInteractive();
+
+    // Обновляем фон кнопок
+    this.updateTabButtonsStyle(gameWidth, gameHeight);
+
+    // Обработчики событий
+    this.partsTabButton.on('pointerdown', () => {
+      if (this.currentTab !== 'parts') {
+        this.currentTab = 'parts';
+        this.updateTabButtonsStyle(gameWidth, gameHeight);
+        this.displayItems();
+      }
+    });
+
+    this.serviceTabButton.on('pointerdown', () => {
+      if (this.currentTab !== 'service') {
+        this.currentTab = 'service';
+        this.updateTabButtonsStyle(gameWidth, gameHeight);
+        this.displayItems();
+      }
+    });
+  }
+
+  updateTabButtonsStyle(gameWidth, gameHeight) {
+    // Обновляем фон кнопки "Запчасти"
+    this.partsTabBg.clear();
+    if (this.currentTab === 'parts') {
+      this.partsTabBg.fillStyle(0xFFEE00, 0.9);
+      this.partsTabButton.setFill('#222222');
+    } else {
+      this.partsTabBg.fillStyle(0x222222, 0.7);
+      this.partsTabButton.setFill('#FFEE00');
+    }
+    this.partsTabBg.fillRoundedRect(gameWidth * 0.3 - 80, gameHeight * 0.22 - 20, 160, 40, 10);
+    this.partsTabBg.lineStyle(2, 0xFFEE00);
+    this.partsTabBg.strokeRoundedRect(gameWidth * 0.3 - 80, gameHeight * 0.22 - 20, 160, 40, 10);
+
+    // Обновляем фон кнопки "СТО"
+    this.serviceTabBg.clear();
+    if (this.currentTab === 'service') {
+      this.serviceTabBg.fillStyle(0xFFEE00, 0.9);
+      this.serviceTabButton.setFill('#222222');
+    } else {
+      this.serviceTabBg.fillStyle(0x222222, 0.7);
+      this.serviceTabButton.setFill('#FFEE00');
+    }
+    this.serviceTabBg.fillRoundedRect(gameWidth * 0.7 - 80, gameHeight * 0.22 - 20, 160, 40, 10);
+    this.serviceTabBg.lineStyle(2, 0xFFEE00);
+    this.serviceTabBg.strokeRoundedRect(gameWidth * 0.7 - 80, gameHeight * 0.22 - 20, 160, 40, 10);
+  }
+
+  displayItems() {
+    // Очищаем предыдущие товары
+    if (this.itemsGroup) {
+      this.itemsGroup.clear(true, true);
+    }
+
+    const gameWidth = this.sys.game.config.width;
+    const gameHeight = this.sys.game.config.height;
+
+    let items = [];
+    if (this.currentTab === 'parts') {
+      items = [
+        { name: 'Скидка 5% (суммируется)', price: 60, description: 'Разовая покупка', onceOnly: true, key: 'parts_special_5' },
+        { name: 'Скидка 10%', price: 40, description: 'Скидка на запчасти' },
+        { name: 'Скидка 20%', price: 100, description: 'Скидка на запчасти' },
+        { name: 'Скидка 25%', price: 120, description: 'Скидка на запчасти' }
+      ];
+    } else {
+      items = [
+        { name: 'Скидка 20% на услуги СТО', price: 200, description: 'Скидка на все услуги СТО', maxPurchases: 3, key: 'sto_20_discount' },
+        { name: '50% на базовое ТО', price: 120, description: 'Скидка на техобслуживание', maxPurchases: 2, key: 'sto_50_to' },
+        { name: '5% на услуги СТО', price: 20, description: 'Суммируется (разовая покупка)', onceOnly: true, key: 'sto_special_5' },
+        { name: '4000 рублей', price: 100, description: '20% от стоимости услуг', maxPurchases: 1, key: 'sto_4000_rubles' },
+        { name: 'Кондиционер бонус', price: 50, description: 'Диагностика + 15% на мойку', maxPurchases: 2, key: 'sto_conditioner' }
+      ];
+    }
+
+    items.forEach((item, index) => {
+      // Адаптивное позиционирование в зависимости от количества товаров
+      const startY = gameHeight * 0.32;
+      const itemHeight = this.currentTab === 'service' ? gameHeight * 0.095 : gameHeight * 0.11;
+      const y = startY + index * itemHeight;
+      this.createShopItem(gameWidth / 2, y, item);
     });
   }
 
@@ -609,32 +1039,155 @@ class ShopScene extends Phaser.Scene {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
     
-    // Используем изображение кнопки товара
-    const itemButton = this.add.image(x, y, item.buttonImage);
-    itemButton.setDisplaySize(gameWidth * 0.85, gameHeight * 0.1);
-    itemButton.setInteractive();
+    // Проверяем статус покупки товара
+    const isOnceOnlyPurchased = item.onceOnly && item.key && GameData.hasPurchasedOnce(item.key);
+    const isMaxPurchased = item.maxPurchases && item.key && !GameData.canPurchaseMore(item.key, item.maxPurchases);
+    const isAlreadyPurchased = isOnceOnlyPurchased || isMaxPurchased;
     
-    itemButton.on('pointerdown', () => {
-      this.buyItem(item);
-    })
-    .on('pointerover', () => {
-      itemButton.setTint(0xf0f0f0);
-    })
-    .on('pointerout', () => {
-      itemButton.clearTint();
-    });
+    // Создаем фон товара программно (адаптивный размер)
+    const itemBg = this.add.graphics();
+    const itemHeight = this.currentTab === 'service' ? gameHeight * 0.07 : gameHeight * 0.08;
+    
+    if (isAlreadyPurchased) {
+      // Серый фон для купленных товаров
+      itemBg.fillStyle(0x666666, 0.5);
+      itemBg.fillRoundedRect(x - gameWidth * 0.4, y - itemHeight/2, gameWidth * 0.8, itemHeight, 12);
+      itemBg.lineStyle(2, 0x888888);
+      itemBg.strokeRoundedRect(x - gameWidth * 0.4, y - itemHeight/2, gameWidth * 0.8, itemHeight, 12);
+    } else {
+      itemBg.fillStyle(0x222222, 0.8);
+      itemBg.fillRoundedRect(x - gameWidth * 0.4, y - itemHeight/2, gameWidth * 0.8, itemHeight, 12);
+      itemBg.lineStyle(2, 0xFFEE00);
+      itemBg.strokeRoundedRect(x - gameWidth * 0.4, y - itemHeight/2, gameWidth * 0.8, itemHeight, 12);
+    }
+    
+    // Добавляем в группу
+    this.itemsGroup.add(itemBg);
+    
+    // Название товара (адаптивный размер шрифта)
+    const titleFontSize = this.currentTab === 'service' ? '14px' : '16px';
+    const titleColor = isAlreadyPurchased ? '#888888' : '#FFEE00';
+    const itemTitle = this.add.text(x - gameWidth * 0.35, y - itemHeight * 0.2, item.name, {
+      font: `bold ${titleFontSize} Commissioner`,
+      fill: titleColor,
+      wordWrap: { width: gameWidth * 0.45 }
+    }).setOrigin(0, 0.5);
+    this.itemsGroup.add(itemTitle);
+    
+    // Цена товара или статус покупки
+    const priceFontSize = this.currentTab === 'service' ? '16px' : '18px';
+    if (isAlreadyPurchased) {
+      let statusText = 'КУПЛЕНО';
+      if (isOnceOnlyPurchased) {
+        statusText = 'КУПЛЕНО';
+      } else if (isMaxPurchased) {
+        statusText = 'ЛИМИТ';
+      }
+      
+      const purchasedText = this.add.text(x + gameWidth * 0.29, y - itemHeight * 0.2, statusText, {
+        font: `bold ${priceFontSize} Commissioner`,
+        fill: '#888888',
+        stroke: '#222222',
+        strokeThickness: 1
+      }).setOrigin(0.5, 0.5);
+      this.itemsGroup.add(purchasedText);
+    } else {
+      const priceText = this.add.text(x + gameWidth * 0.25, y - itemHeight * 0.2, `${item.price}`, {
+        font: `bold ${priceFontSize} Commissioner`,
+        fill: '#FFEE00',
+        stroke: '#222222',
+        strokeThickness: 1
+      }).setOrigin(0.5, 0.5);
+      this.itemsGroup.add(priceText);
+      
+      // Иконка монеты рядом с ценой
+      const coinSize = this.currentTab === 'service' ? { w: gameWidth * 0.05, h: gameHeight * 0.035 } : { w: gameWidth * 0.06, h: gameHeight * 0.04 };
+      const coinIcon = this.add.image(x + gameWidth * 0.32, y - itemHeight * 0.2, 'coin1');
+      coinIcon.setDisplaySize(coinSize.w, coinSize.h);
+      this.itemsGroup.add(coinIcon);
+      
+      // Показываем оставшееся количество покупок для товаров с лимитами
+      if (item.maxPurchases && item.key) {
+        const purchased = GameData.getPurchaseCount(item.key);
+        const remaining = item.maxPurchases - purchased;
+        const limitText = this.add.text(x + gameWidth * 0.35, y + itemHeight * 0.15, `${remaining}/${item.maxPurchases}`, {
+          font: '10px Commissioner',
+          fill: '#FFEE00',
+          stroke: '#222222',
+          strokeThickness: 1
+        }).setOrigin(0.5, 0.5);
+        this.itemsGroup.add(limitText);
+      }
+    }
+    
+    // Описание товара
+    const descFontSize = this.currentTab === 'service' ? '10px' : '12px';
+    const descColor = isAlreadyPurchased ? '#666666' : '#C8C8C8';
+    const itemDesc = this.add.text(x - gameWidth * 0.35, y + itemHeight * 0.1, item.description, {
+      font: `${descFontSize} Commissioner`,
+      fill: descColor,
+      wordWrap: { width: gameWidth * 0.5 }
+    }).setOrigin(0, 0.5);
+    this.itemsGroup.add(itemDesc);
+    
+    // Создаем невидимую область для клика (только если не куплено)
+    if (!isAlreadyPurchased) {
+      const clickArea = this.add.rectangle(x, y, gameWidth * 0.8, itemHeight, 0x000000, 0);
+      clickArea.setInteractive();
+      this.itemsGroup.add(clickArea);
+      
+      clickArea.on('pointerdown', () => {
+        this.buyItem(item);
+      })
+      .on('pointerover', () => {
+        itemBg.clear();
+        itemBg.fillStyle(0xFFEE00, 0.2);
+        itemBg.fillRoundedRect(x - gameWidth * 0.4, y - itemHeight/2, gameWidth * 0.8, itemHeight, 12);
+        itemBg.lineStyle(2, 0xFFEE00);
+        itemBg.strokeRoundedRect(x - gameWidth * 0.4, y - itemHeight/2, gameWidth * 0.8, itemHeight, 12);
+      })
+      .on('pointerout', () => {
+        itemBg.clear();
+        itemBg.fillStyle(0x222222, 0.8);
+        itemBg.fillRoundedRect(x - gameWidth * 0.4, y - itemHeight/2, gameWidth * 0.8, itemHeight, 12);
+        itemBg.lineStyle(2, 0xFFEE00);
+        itemBg.strokeRoundedRect(x - gameWidth * 0.4, y - itemHeight/2, gameWidth * 0.8, itemHeight, 12);
+      });
+    }
   }
 
   buyItem(item) {
-    // Проверяем, является ли товар скидкой
-    if (item.name.includes('Скидка')) {
+    // Проверяем лимиты покупок
+    if (item.onceOnly && item.key && GameData.hasPurchasedOnce(item.key)) {
+      this.showMessage('Этот товар уже куплен!');
+      return;
+    }
+    
+    if (item.maxPurchases && item.key && !GameData.canPurchaseMore(item.key, item.maxPurchases)) {
+      this.showMessage('Достигнут лимит покупок для этого товара!');
+      return;
+    }
+    
+    // Проверяем, является ли товар скидкой или услугой
+    if (item.name.includes('Скидка') || item.name.includes('%') || item.name.includes('рублей') || item.name.includes('Кондиционер')) {
       this.showDiscountWarning(item);
     } else {
       if (GameData.spendDiamonds(item.price)) {
+        // Помечаем покупку
+        if (item.onceOnly && item.key) {
+          GameData.markAsPurchasedOnce(item.key);
+        }
+        if (item.maxPurchases && item.key) {
+          GameData.incrementPurchaseCount(item.key);
+        }
+        
         // Воспроизводим звук покупки (монетка)
         SoundManager.playSound(this, 'coin', 1.8);
         this.showPurchaseConfirmation(item);
         this.updateCoinsDisplay();
+        
+        // Обновляем отображение товаров
+        this.displayItems();
       } else {
         this.showMessage('Недостаточно монет!');
       }
@@ -647,10 +1200,12 @@ class ShopScene extends Phaser.Scene {
 
     // Затемнение
     const overlay = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x000000, 0.7);
+    overlay.setDepth(1000);
 
     // Окно предупреждения (увеличено по высоте для двух рядов кнопок)
     const warningBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth * 0.85, gameHeight * 0.6, 0x333333);
     warningBox.setStrokeStyle(3, 0xFFFF00);
+    warningBox.setDepth(1001);
 
     const titleText = this.add.text(gameWidth / 2, gameHeight / 2 - gameHeight * 0.2, 'ВНИМАНИЕ!', {
       font: 'bold 24px Arial',
@@ -658,15 +1213,24 @@ class ShopScene extends Phaser.Scene {
       stroke: '#000',
       strokeThickness: 2
     }).setOrigin(0.5);
+    titleText.setDepth(1002);
+
+    let warningTextContent;
+    if (this.currentTab === 'parts') {
+      warningTextContent = 'После покупки вы направляетесь\nна форму записи для получения\nскидки на ЗАПЧАСТИ.\n\nТОЛЬКО ПО НЕЙ ВЫ СМОЖЕТЕ\nПОЛУЧИТЬ СКИДКУ!';
+    } else {
+      warningTextContent = 'После покупки вы направляетесь\nна форму записи для получения\nскидки на УСЛУГИ СТО.\n\nТОЛЬКО ПО НЕЙ ВЫ СМОЖЕТЕ\nПОЛУЧИТЬ СКИДКУ!';
+    }
 
     const warningText = this.add.text(gameWidth / 2, gameHeight / 2 - gameHeight * 0.08, 
-      'После покупки вы направляетесь\nна уникальную форму записи.\n\nТОЛЬКО ПО НЕЙ ВЫ СМОЖЕТЕ\nПОЛУЧИТЬ СКИДКУ!', {
+      warningTextContent, {
       font: 'bold 16px Arial',
       fill: '#fff',
       stroke: '#000',
       strokeThickness: 1,
       align: 'center'
     }).setOrigin(0.5);
+    warningText.setDepth(1002);
 
     const continueButton = this.createButton(gameWidth / 2, gameHeight / 2 + gameHeight * 0.08, 'ПРОДОЛЖИТЬ', {
       font: 'bold 16px Arial',
@@ -676,14 +1240,26 @@ class ShopScene extends Phaser.Scene {
       strokeThickness: 2
     }, () => {
       if (GameData.spendDiamonds(item.price)) {
+        // Помечаем покупку
+        if (item.onceOnly && item.key) {
+          GameData.markAsPurchasedOnce(item.key);
+        }
+        if (item.maxPurchases && item.key) {
+          GameData.incrementPurchaseCount(item.key);
+        }
+        
         this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
         this.showPurchaseConfirmation(item);
         this.updateCoinsDisplay();
+        
+        // Обновляем отображение товаров
+        this.displayItems();
       } else {
         this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
         this.showMessage('Недостаточно монет!');
       }
     });
+    continueButton.setDepth(1002);
 
     const cancelButton = this.createButton(gameWidth / 2, gameHeight / 2 + gameHeight * 0.16, 'ОТМЕНА', {
       font: 'bold 16px Arial',
@@ -694,6 +1270,7 @@ class ShopScene extends Phaser.Scene {
     }, () => {
       this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
     });
+    cancelButton.setDepth(1002);
   }
 
   destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton) {
@@ -711,10 +1288,12 @@ class ShopScene extends Phaser.Scene {
 
     // Затемнение
     const overlay = this.add.rectangle(gameWidth / 2, gameHeight / 2, gameWidth, gameHeight, 0x000000, 0.7);
+    overlay.setDepth(1000); // Высокий z-index
 
     // Окно подтверждения (увеличено по высоте для двух рядов кнопок)
     const confirmBox = this.add.rectangle(gameWidth / 2, gameHeight / 2, 400, 320, 0x333333);
     confirmBox.setStrokeStyle(3, 0xFFFFFF);
+    confirmBox.setDepth(1001); // Еще выше
 
     const titleText = this.add.text(gameWidth / 2, gameHeight / 2 - 60, 'ПОКУПКА СОВЕРШЕНА!', {
       font: 'bold 24px Arial',
@@ -722,16 +1301,19 @@ class ShopScene extends Phaser.Scene {
       stroke: '#000',
       strokeThickness: 2
     }).setOrigin(0.5);
+    titleText.setDepth(1002);
 
     const itemText = this.add.text(gameWidth / 2, gameHeight / 2 - 20, `${item.name} приобретен!`, {
       font: '18px Arial',
       fill: '#fff'
     }).setOrigin(0.5);
+    itemText.setDepth(1002);
 
     const questionText = this.add.text(gameWidth / 2, gameHeight / 2 + 10, 'Перейти на сайт?', {
       font: '16px Arial',
       fill: '#ccc'
     }).setOrigin(0.5);
+    questionText.setDepth(1002);
 
     const yesButton = this.createButton(gameWidth / 2, gameHeight / 2 + 40, 'ДА', {
       font: 'bold 20px Arial',
@@ -740,9 +1322,17 @@ class ShopScene extends Phaser.Scene {
       stroke: '#000',
       strokeThickness: 2
     }, () => {
-      this.openLink('https://koreanaparts.ru/block/119');
+      // Выбираем ссылку в зависимости от типа товара
+      let targetUrl;
+      if (this.currentTab === 'parts') {
+        targetUrl = 'https://koreanaparts.ru/block/119'; // Для запчастей
+      } else {
+        targetUrl = 'https://koreanaparts.ru/services'; // Для СТО
+      }
+      this.openLink(targetUrl);
       this.destroyConfirmDialog(overlay, confirmBox, titleText, itemText, questionText, yesButton, noButton);
     });
+    yesButton.setDepth(1002);
 
     const noButton = this.createButton(gameWidth / 2, gameHeight / 2 + 100, 'НЕТ', {
       font: 'bold 20px Arial',
@@ -753,6 +1343,7 @@ class ShopScene extends Phaser.Scene {
     }, () => {
       this.destroyConfirmDialog(overlay, confirmBox, titleText, itemText, questionText, yesButton, noButton);
     });
+    noButton.setDepth(1002);
   }
 
   destroyConfirmDialog(overlay, confirmBox, titleText, itemText, questionText, yesButton, noButton) {
@@ -2265,7 +2856,7 @@ const config = {
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   physics: { default: 'arcade' },
-  scene: [MenuScene, ShopScene, PromotionsScene, LeaderboardScene, MainScene]
+  scene: [MenuScene, ShopScene, PromotionsScene, LeaderboardScene, ConditionsScene, MainScene]
 };
 
 const game = new Phaser.Game(config);
