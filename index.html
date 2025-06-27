@@ -870,15 +870,15 @@ class ShopScene extends Phaser.Scene {
   createTabButtons(gameWidth, gameHeight) {
     // Кнопка "Запчасти"
     this.partsTabBg = this.add.graphics();
-    this.partsTabButton = this.add.text(gameWidth * 0.3, gameHeight * 0.22, 'ЗАПЧАСТИ', {
-      font: 'bold 18px Commissioner',
+    this.partsTabButton = this.add.text(gameWidth * 0.27, gameHeight * 0.22, 'ЗАПЧАСТИ', {
+      font: 'bold 16px Commissioner',
       fill: this.currentTab === 'parts' ? '#222222' : '#FFEE00'
     }).setOrigin(0.5).setInteractive();
 
     // Кнопка "СТО"
     this.serviceTabBg = this.add.graphics();
-    this.serviceTabButton = this.add.text(gameWidth * 0.7, gameHeight * 0.22, 'СТО', {
-      font: 'bold 18px Commissioner',
+    this.serviceTabButton = this.add.text(gameWidth * 0.73, gameHeight * 0.22, 'СТО', {
+      font: 'bold 16px Commissioner',
       fill: this.currentTab === 'service' ? '#222222' : '#FFEE00'
     }).setOrigin(0.5).setInteractive();
 
@@ -913,9 +913,9 @@ class ShopScene extends Phaser.Scene {
       this.partsTabBg.fillStyle(0x222222, 0.7);
       this.partsTabButton.setFill('#FFEE00');
     }
-    this.partsTabBg.fillRoundedRect(gameWidth * 0.3 - 80, gameHeight * 0.22 - 20, 160, 40, 10);
+    this.partsTabBg.fillRoundedRect(gameWidth * 0.27 - 70, gameHeight * 0.22 - 18, 140, 36, 8);
     this.partsTabBg.lineStyle(2, 0xFFEE00);
-    this.partsTabBg.strokeRoundedRect(gameWidth * 0.3 - 80, gameHeight * 0.22 - 20, 160, 40, 10);
+    this.partsTabBg.strokeRoundedRect(gameWidth * 0.27 - 70, gameHeight * 0.22 - 18, 140, 36, 8);
 
     // Обновляем фон кнопки "СТО"
     this.serviceTabBg.clear();
@@ -926,9 +926,9 @@ class ShopScene extends Phaser.Scene {
       this.serviceTabBg.fillStyle(0x222222, 0.7);
       this.serviceTabButton.setFill('#FFEE00');
     }
-    this.serviceTabBg.fillRoundedRect(gameWidth * 0.7 - 80, gameHeight * 0.22 - 20, 160, 40, 10);
+    this.serviceTabBg.fillRoundedRect(gameWidth * 0.73 - 50, gameHeight * 0.22 - 18, 100, 36, 8);
     this.serviceTabBg.lineStyle(2, 0xFFEE00);
-    this.serviceTabBg.strokeRoundedRect(gameWidth * 0.7 - 80, gameHeight * 0.22 - 20, 160, 40, 10);
+    this.serviceTabBg.strokeRoundedRect(gameWidth * 0.73 - 50, gameHeight * 0.22 - 18, 100, 36, 8);
   }
 
   displayItems() {
@@ -943,25 +943,25 @@ class ShopScene extends Phaser.Scene {
     let items = [];
     if (this.currentTab === 'parts') {
       items = [
-        { name: 'Скидка 5% (суммируется)', price: 60, description: 'Разовая покупка', onceOnly: true, key: 'parts_special_5' },
+        { name: 'Скидка 5%', price: 60, description: 'Суммируется (разовая покупка)', onceOnly: true, key: 'parts_special_5' },
         { name: 'Скидка 10%', price: 40, description: 'Скидка на запчасти' },
         { name: 'Скидка 20%', price: 100, description: 'Скидка на запчасти' },
         { name: 'Скидка 25%', price: 120, description: 'Скидка на запчасти' }
       ];
     } else {
       items = [
-        { name: 'Скидка 20% на услуги СТО', price: 200, description: 'Скидка на все услуги СТО', maxPurchases: 3, key: 'sto_20_discount' },
-        { name: '50% на базовое ТО', price: 120, description: 'Скидка на техобслуживание', maxPurchases: 2, key: 'sto_50_to' },
+        { name: 'Скидка 20% на услуги СТО', price: 200, description: 'Скидка на все услуги СТО' },
+        { name: '50% на базовое ТО', price: 120, description: 'Скидка на техобслуживание' },
         { name: '5% на услуги СТО', price: 20, description: 'Суммируется (разовая покупка)', onceOnly: true, key: 'sto_special_5' },
-        { name: '4000 рублей', price: 100, description: '20% от стоимости услуг', maxPurchases: 1, key: 'sto_4000_rubles' },
-        { name: 'Кондиционер бонус', price: 50, description: 'Диагностика + 15% на мойку', maxPurchases: 2, key: 'sto_conditioner' }
+        { name: '4000 рублей', price: 100, description: '20% от стоимости услуг' },
+        { name: 'Кондиционер бонус', price: 50, description: 'Диагностика + 15% на мойку' }
       ];
     }
 
     items.forEach((item, index) => {
       // Адаптивное позиционирование в зависимости от количества товаров
       const startY = gameHeight * 0.32;
-      const itemHeight = this.currentTab === 'service' ? gameHeight * 0.095 : gameHeight * 0.11;
+      const itemHeight = this.currentTab === 'service' ? gameHeight * 0.095 : gameHeight * 0.105; // Уменьшили высоту для запчастей
       const y = startY + index * itemHeight;
       this.createShopItem(gameWidth / 2, y, item);
     });
@@ -1039,14 +1039,12 @@ class ShopScene extends Phaser.Scene {
     const gameWidth = this.sys.game.config.width;
     const gameHeight = this.sys.game.config.height;
     
-    // Проверяем статус покупки товара
-    const isOnceOnlyPurchased = item.onceOnly && item.key && GameData.hasPurchasedOnce(item.key);
-    const isMaxPurchased = item.maxPurchases && item.key && !GameData.canPurchaseMore(item.key, item.maxPurchases);
-    const isAlreadyPurchased = isOnceOnlyPurchased || isMaxPurchased;
+    // Проверяем статус покупки товара (только для однократных товаров)
+    const isAlreadyPurchased = item.onceOnly && item.key && GameData.hasPurchasedOnce(item.key);
     
     // Создаем фон товара программно (адаптивный размер)
     const itemBg = this.add.graphics();
-    const itemHeight = this.currentTab === 'service' ? gameHeight * 0.07 : gameHeight * 0.08;
+    const itemHeight = this.currentTab === 'service' ? gameHeight * 0.07 : gameHeight * 0.075; // Уменьшили для запчастей
     
     if (isAlreadyPurchased) {
       // Серый фон для купленных товаров
@@ -1065,7 +1063,7 @@ class ShopScene extends Phaser.Scene {
     this.itemsGroup.add(itemBg);
     
     // Название товара (адаптивный размер шрифта)
-    const titleFontSize = this.currentTab === 'service' ? '14px' : '16px';
+    const titleFontSize = this.currentTab === 'service' ? '14px' : '15px'; // Уменьшили для запчастей
     const titleColor = isAlreadyPurchased ? '#888888' : '#FFEE00';
     const itemTitle = this.add.text(x - gameWidth * 0.35, y - itemHeight * 0.2, item.name, {
       font: `bold ${titleFontSize} Commissioner`,
@@ -1075,16 +1073,9 @@ class ShopScene extends Phaser.Scene {
     this.itemsGroup.add(itemTitle);
     
     // Цена товара или статус покупки
-    const priceFontSize = this.currentTab === 'service' ? '16px' : '18px';
+    const priceFontSize = this.currentTab === 'service' ? '16px' : '17px'; // Уменьшили для запчастей
     if (isAlreadyPurchased) {
-      let statusText = 'КУПЛЕНО';
-      if (isOnceOnlyPurchased) {
-        statusText = 'КУПЛЕНО';
-      } else if (isMaxPurchased) {
-        statusText = 'ЛИМИТ';
-      }
-      
-      const purchasedText = this.add.text(x + gameWidth * 0.29, y - itemHeight * 0.2, statusText, {
+      const purchasedText = this.add.text(x + gameWidth * 0.29, y - itemHeight * 0.2, 'КУПЛЕНО', {
         font: `bold ${priceFontSize} Commissioner`,
         fill: '#888888',
         stroke: '#222222',
@@ -1106,22 +1097,12 @@ class ShopScene extends Phaser.Scene {
       coinIcon.setDisplaySize(coinSize.w, coinSize.h);
       this.itemsGroup.add(coinIcon);
       
-      // Показываем оставшееся количество покупок для товаров с лимитами
-      if (item.maxPurchases && item.key) {
-        const purchased = GameData.getPurchaseCount(item.key);
-        const remaining = item.maxPurchases - purchased;
-        const limitText = this.add.text(x + gameWidth * 0.35, y + itemHeight * 0.15, `${remaining}/${item.maxPurchases}`, {
-          font: '10px Commissioner',
-          fill: '#FFEE00',
-          stroke: '#222222',
-          strokeThickness: 1
-        }).setOrigin(0.5, 0.5);
-        this.itemsGroup.add(limitText);
-      }
+      // Показываем оставшееся количество покупок только для товаров с лимитами (которых больше нет)
+      // Этот блок можно удалить, так как maxPurchases больше не используется
     }
     
     // Описание товара
-    const descFontSize = this.currentTab === 'service' ? '10px' : '12px';
+    const descFontSize = this.currentTab === 'service' ? '10px' : '11px'; // Уменьшили для запчастей
     const descColor = isAlreadyPurchased ? '#666666' : '#C8C8C8';
     const itemDesc = this.add.text(x - gameWidth * 0.35, y + itemHeight * 0.1, item.description, {
       font: `${descFontSize} Commissioner`,
@@ -1157,14 +1138,9 @@ class ShopScene extends Phaser.Scene {
   }
 
   buyItem(item) {
-    // Проверяем лимиты покупок
+    // Проверяем лимиты покупок (только для однократных товаров)
     if (item.onceOnly && item.key && GameData.hasPurchasedOnce(item.key)) {
       this.showMessage('Этот товар уже куплен!');
-      return;
-    }
-    
-    if (item.maxPurchases && item.key && !GameData.canPurchaseMore(item.key, item.maxPurchases)) {
-      this.showMessage('Достигнут лимит покупок для этого товара!');
       return;
     }
     
@@ -1176,9 +1152,6 @@ class ShopScene extends Phaser.Scene {
         // Помечаем покупку
         if (item.onceOnly && item.key) {
           GameData.markAsPurchasedOnce(item.key);
-        }
-        if (item.maxPurchases && item.key) {
-          GameData.incrementPurchaseCount(item.key);
         }
         
         // Воспроизводим звук покупки (монетка)
@@ -1243,9 +1216,6 @@ class ShopScene extends Phaser.Scene {
         // Помечаем покупку
         if (item.onceOnly && item.key) {
           GameData.markAsPurchasedOnce(item.key);
-        }
-        if (item.maxPurchases && item.key) {
-          GameData.incrementPurchaseCount(item.key);
         }
         
         this.destroyWarningDialog(overlay, warningBox, titleText, warningText, continueButton, cancelButton);
